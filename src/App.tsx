@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import './App.css'
 
 function App() {
   const [supported, setSupported] = useState<boolean>(false)
@@ -139,62 +138,81 @@ function App() {
   }
 
   return (
-    <main className="container">
-      <h1>Jarvis</h1>
-      <section className="card">
-        <h2>Voice Input</h2>
+    <main className="mx-auto max-w-2xl p-6">
+      {/* Header */}
+      <header className="mb-3 flex items-center justify-between">
+        <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent">Jarvis</h1>
+        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm text-emerald-700">
+          <span className="size-2.5 rounded-full bg-emerald-500" /> Online
+        </span>
+      </header>
+
+      {/* Controls */}
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-xl mb-2 font-medium">Voice Input</h2>
         {!supported ? (
-          <p style={{ color: 'crimson' }}>
-            SpeechRecognition not supported in this browser.
-          </p>
+          <p className="text-red-600">SpeechRecognition not supported in this browser.</p>
         ) : (
-          <div style={{ display: 'grid', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
+          <div className="grid gap-2">
+            <div className="flex gap-2">
               {!listening ? (
-                <button onClick={startListening} title="Start listening">
-                  🎤 Start
+                <button onClick={startListening} title="Start listening" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white shadow hover:bg-blue-700">
+                  <span>🎤</span> <span className="font-medium">Start</span>
                 </button>
               ) : (
-                <button onClick={stopListening} title="Stop listening">
-                  ⏹️ Stop
+                <button onClick={stopListening} title="Stop listening" className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-red-700 hover:border-red-400">
+                  <span className="relative inline-flex items-center">
+                    ⏹️
+                    <span className="ml-2 inline-flex items-center gap-1 text-red-600">
+                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+                      Listening
+                    </span>
+                  </span>
                 </button>
               )}
-              <button onClick={() => { setTranscript(''); setInterim(''); setMessages([]); }} title="Clear transcript">
-                🧹 Clear
+              <button onClick={() => { setTranscript(''); setInterim(''); setMessages([]); }} title="Clear transcript" className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:border-gray-400">
+                <span>🧹</span> <span className="font-medium">Clear</span>
               </button>
             </div>
-            <div>
-              <small>Status: {listening ? 'Listening…' : 'Idle'}</small>
-              {error && (
-                <small style={{ color: 'crimson', marginLeft: 8 }}>
-                  Error: {error}
-                </small>
-              )}
+            <div className="text-sm text-gray-600">
+              <span>Status: {listening ? 'Listening…' : 'Idle'}</span>
+              {error && <span className="ml-2 text-red-600">Error: {error}</span>}
             </div>
             <div>
-              <label><strong>Transcript:</strong></label>
-              <div style={{ padding: 8, border: '1px solid #555', borderRadius: 6, minHeight: 48 }}>
-                {transcript || <span style={{ opacity: 0.6 }}>Say something…</span>}
-                {interim && (
-                  <span style={{ opacity: 0.6 }}> {interim}</span>
-                )}
+              <label className="font-semibold">Transcript:</label>
+              <div className="mt-1 min-h-12 rounded-lg border border-gray-300 p-3 text-gray-900 ring-blue-100 focus-within:ring">
+                {transcript || <span className="text-gray-400">Say something…</span>}
+                {interim && <span className="text-gray-400"> {interim}</span>}
               </div>
             </div>
           </div>
         )}
       </section>
 
-      <section className="card" style={{ marginTop: 16 }}>
-        <h2>Conversation</h2>
+      {/* Conversation */}
+      <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-xl mb-3 font-medium">Conversation</h2>
         {messages.length === 0 ? (
-          <p style={{ opacity: 0.7 }}>Try saying “Hello Jarvis” or “What’s the time?”</p>
+          <p className="text-gray-600">Try saying “Hello Jarvis” or “What’s the time?”</p>
         ) : (
-          <ul className="chat">
-            {messages.map((m, i) => (
-              <li key={i} className={m.role === 'you' ? 'me' : 'jarvis'}>
-                <strong>{m.role === 'you' ? 'You' : 'Jarvis'}:</strong> {m.text}
-              </li>
-            ))}
+          <ul className="space-y-3">
+            {messages.map((m, i) => {
+              const isYou = m.role === 'you'
+              return (
+                <li key={i} className={`flex ${isYou ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
+                    isYou
+                      ? 'bg-blue-600 text-white rounded-br-sm'
+                      : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+                  }`}>
+                    <div className="mb-0.5 text-[11px] opacity-80">
+                      {isYou ? 'You' : 'Jarvis'}
+                    </div>
+                    <div>{m.text}</div>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         )}
       </section>

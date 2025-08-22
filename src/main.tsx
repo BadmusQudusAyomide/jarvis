@@ -9,12 +9,16 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// Register service worker for PWA (only in production and when supported)
-if ('serviceWorker' in navigator) {
+// Register service worker for PWA only in production
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Use the sw.js at the root so it controls the whole scope
     navigator.serviceWorker
       .register('/sw.js')
       .catch((err) => console.error('SW registration failed:', err))
+  })
+} else if ('serviceWorker' in navigator) {
+  // In dev, try to unregister any existing SW to avoid caching issues
+  navigator.serviceWorker.getRegistrations?.().then((regs) => {
+    regs.forEach((reg) => reg.unregister().catch(() => {}))
   })
 }
