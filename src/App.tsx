@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { tryAutomationForTarget } from './services/automation'
 
 // Enhanced personality packs
 const MOTIVATIONAL_QUOTES = [
@@ -276,8 +277,8 @@ function App() {
     setIsTyping(true)
     playSound('chime')
 
-    setTimeout(() => {
-      const reply = generateReply(trimmed)
+    setTimeout(async () => {
+      const reply = await generateReply(trimmed)
       setMessages(m => [...m, { role: 'jarvis', text: reply }])
       speak(reply)
       setIsTyping(false)
@@ -285,7 +286,7 @@ function App() {
     }, 500)
   }
 
-  const generateReply = (text: string) => {
+  const generateReply = async (text: string): Promise<string> => {
     const lower = text.toLowerCase().trim()
 
     // Birthday triggers
@@ -385,6 +386,16 @@ function App() {
     const openMatch = lower.match(/^open\s+(?:the\s+)?([\w\- ]+)$/)
     if (openMatch) {
       const target = openMatch[1].trim()
+      // First, try local PC automation via backend
+      try {
+        const automation = await tryAutomationForTarget(target)
+        if (automation.handled) {
+          return automation.result?.status === 'success'
+            ? `Opening ${target} on your PC...`
+            : `Couldn't open ${target}: ${automation.result?.message}`
+        }
+      } catch { /* ignore and fall back to web */ }
+
       const urlMap = {
         youtube: 'https://youtube.com',
         'you tube': 'https://youtube.com',
@@ -573,7 +584,7 @@ function App() {
   {/* Header */ }
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-black/40 border-b border-white/10">
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-start">
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="relative">
                 <div className={`absolute inset-0 bg-gradient-to-r ${currentTheme.primary} rounded-xl opacity-80 animate-pulse blur-sm`}></div>
@@ -587,27 +598,6 @@ function App() {
                 </h1>
                 <p className="text-xs text-gray-400">Your AI Companion</p>
               </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${listening ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`}></div>
-                <span className="text-sm text-gray-300">{listening ? 'Listening' : 'Ready'}</span>
-              </div>
-              <div className="text-right">
-                <div className={`text-sm font-mono text-${currentTheme.accent}`}>
-                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-                <div className="text-xs text-gray-400">
-                  {currentTime.toLocaleDateString('en-US', { weekday: 'short' })}
-                </div>
-              </div>
-              <button
-                onClick={() => setIsMinimized(true)}
-                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-              >
-                <span className="text-white">−</span>
-              </button>
             </div>
           </div>
         </div>
