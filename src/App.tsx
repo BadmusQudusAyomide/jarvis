@@ -8,6 +8,8 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const [messages, setMessages] = useState<Array<{ role: 'you' | 'jarvis'; text: string }>>([])
+  const [isTyping, setIsTyping] = useState(false)
+  const [manualText, setManualText] = useState('')
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -98,34 +100,80 @@ function App() {
   }
 
   const handleUserUtterance = (text: string) => {
-    setMessages((m) => [...m, { role: 'you', text }])
-    const reply = generateReply(text)
-    setMessages((m) => [...m, { role: 'jarvis', text: reply }])
-    speak(reply)
+    const trimmed = text.trim()
+    if (!trimmed) return
+    setMessages((m) => [...m, { role: 'you', text: trimmed }])
+    setIsTyping(true)
+    // small delay to show typing indicator consistently
+    setTimeout(() => {
+      const reply = generateReply(trimmed)
+      setMessages((m) => [...m, { role: 'jarvis', text: reply }])
+      speak(reply)
+      setIsTyping(false)
+    }, 450)
   }
 
   const generateReply = (text: string): string => {
-    const lower = text.toLowerCase()
-    // Greetings
-    if (/(hello|hi|hey|yo)[!,. ]?|good (morning|afternoon|evening)/.test(lower)) {
-      return 'Hello Boss, how are you today?'
+    const lower = text.toLowerCase().trim()
+
+    // Open links: "Open YouTube", "Open GitHub", etc.
+    const openMatch = lower.match(/^open\s+(?:the\s+)?([\w\- ]+)$/)
+    if (openMatch) {
+      const target = openMatch[1].trim()
+      const urlMap: Record<string, string> = {
+        youtube: 'https://youtube.com',
+        'you tube': 'https://youtube.com',
+        google: 'https://google.com',
+        github: 'https://github.com',
+        twitter: 'https://twitter.com',
+        x: 'https://x.com',
+        facebook: 'https://facebook.com',
+        instagram: 'https://instagram.com',
+        reddit: 'https://reddit.com',
+        linkedin: 'https://linkedin.com',
+        netflix: 'https://netflix.com',
+        gmail: 'https://mail.google.com',
+        maps: 'https://maps.google.com',
+        'google maps': 'https://maps.google.com',
+        docs: 'https://docs.google.com',
+        spotify: 'https://spotify.com',
+      }
+
+      const key = target as keyof typeof urlMap
+      const url = urlMap[key]
+      if (url) {
+        try {
+          window.open(url, '_blank', 'noopener,noreferrer')
+          const pretty = key
+            .toString()
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+          return `Opening ${pretty}.`
+        } catch {
+          return `I couldn't open ${target} in your browser.`
+        }
+      }
+      return `I don't recognize "${target}". Try YouTube, Google, GitHub, Maps, Gmail, etc.`
     }
+
+    // Greetings
+    if (/(^|\b)(hello|hi|hey|yo)(\b|[!,. ])|good (morning|afternoon|evening)/.test(lower)) {
+      return 'Hello Boss.'
+    }
+
     // Time
-    if (/what(?:'| i)?s the time|current time|tell me the time/.test(lower)) {
+    if (/(what(?:'| i)?s the time|current time|tell me the time|time is it)/.test(lower)) {
       const now = new Date()
       const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       return `It is ${time}.`
     }
+
     // Date
-    if (/what(?:'| i)?s the date|today'?s date|what day is it/.test(lower)) {
+    if (/(what(?:'| i)?s the date|today'?s date|what day is it)/.test(lower)) {
       const now = new Date()
       const date = now.toLocaleDateString()
       return `Today is ${date}.`
     }
-    // Weather (placeholder)
-    if (/weather|temperature|how.*outside/.test(lower)) {
-      return "I'm not connected to weather services yet, but I can help you implement that feature."
-    }
+
     // Fallback echo
     return `You said: "${text}"`
   }
@@ -244,6 +292,21 @@ function App() {
                     </div>
                   )
                 })}
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] rounded-2xl p-4 bg-cyan-900/30 border border-cyan-700/30">
+                      <div className="flex items-center mb-1.5">
+                        <div className="w-2 h-2 rounded-full mr-2 bg-cyan-400"></div>
+                        <span className="text-xs font-medium text-gray-300">JARVIS</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></span>
+                        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+                        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             )}
@@ -307,6 +370,31 @@ function App() {
                   )}
                 </div>
               </div>
+
+              {!listening && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    handleUserUtterance(manualText)
+                    setManualText('')
+                  }}
+                  className="mt-4 flex items-center gap-2"
+                >
+                  <input
+                    type="text"
+                    value={manualText}
+                    onChange={(e) => setManualText(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 rounded-lg bg-gray-900/40 border border-gray-700/50 px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-600/40"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-sm"
+                  >
+                    Send
+                  </button>
+                </form>
+              )}
             </div>
           )}
         </div>
