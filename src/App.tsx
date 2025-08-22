@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { tryAutomationForTarget } from './services/automation'
+import { getWeatherResponse } from './services/weather'
 
 // Enhanced personality packs
 const MOTIVATIONAL_QUOTES = [
@@ -341,10 +342,15 @@ function App() {
       return `Here's one for you: ${joke} 😄`
     }
 
-    // Weather (with helpful response)
-    if (/(weather|temperature|rain|sunny|cloudy)/.test(lower)) {
-      const response = WEATHER_RESPONSES[Math.floor(Math.random() * WEATHER_RESPONSES.length)]
-      return response
+    // Weather (real data with fallback)
+    if (/(weather|temperature|rain|sunny|cloudy|forecast)/.test(lower)) {
+      try {
+        const response = await getWeatherResponse(text)
+        return response
+      } catch {
+        const response = WEATHER_RESPONSES[Math.floor(Math.random() * WEATHER_RESPONSES.length)]
+        return response
+      }
     }
 
     // Enhanced identity responses
