@@ -1,60 +1,107 @@
 import { useEffect, useRef, useState } from 'react'
 
-// Personality pack: motivational quotes and jokes
-const MOTIVATIONAL_QUOTES: string[] = [
+// Enhanced personality packs
+const MOTIVATIONAL_QUOTES = [
+  "The future belongs to those who believe in the beauty of their dreams.",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+  "Your only limit is your mind. Break through it.",
+  "Great things never come from comfort zones.",
+  "The best time to plant a tree was 20 years ago. The second best time is now.",
+  "Don't watch the clock; do what it does. Keep going.",
+  "You are never too old to set another goal or to dream a new dream.",
+  "The difference between ordinary and extraordinary is that little extra.",
   "Believe you can and you're halfway there.",
-  "Small steps every day lead to big results.",
-  "Focus, commit, and execute.",
-  "Your future is created by what you do today, not tomorrow.",
-  "Discipline beats motivation. Start now.",
-  "Make it happen. Shock everyone.",
-  "Progress over perfection.",
-  "Dream big. Start small. Act now.",
+  "Champions train, losers complain."
 ]
 
-const JOKES: string[] = [
-  "Why did the developer go broke? Because they used up all their cache.",
-  "I told my computer I needed a break, and it said: 'No problem, I'll go to sleep.'",
-  "Why do programmers prefer dark mode? Because light attracts bugs.",
-  "There are only 10 types of people in the world: those who understand binary and those who don't.",
-  "Debugging: being the detective in a crime movie where you are also the murderer.",
-  "I would tell you a UDP joke, but you might not get it.",
+const JOKES = [
+  "Why don't scientists trust atoms? Because they make up everything!",
+  "I told my wife she was drawing her eyebrows too high. She looked surprised.",
+  "Why did the scarecrow win an award? He was outstanding in his field!",
+  "Parallel lines have so much in common. It's a shame they'll never meet.",
+  "I invented a new word: Plagiarism!",
+  "Why don't programmers like nature? It has too many bugs.",
+  "How do you organize a space party? You planet!",
+  "Why did the math book look so sad? Because it had too many problems!",
+  "What do you call a fake noodle? An impasta!",
+  "Time flies like an arrow. Fruit flies like a banana."
 ]
 
-// Fun Easter eggs: key phrase -> witty response (string or generator)
+const PRODUCTIVITY_TIPS = [
+  "Try the Pomodoro Technique: 25 minutes of focused work, 5-minute break.",
+  "Start your day by eating the frog - tackle your hardest task first.",
+  "Use the 2-minute rule: if it takes less than 2 minutes, do it now.",
+  "Batch similar tasks together to maintain focus and efficiency.",
+  "Keep your workspace clean and organized for better mental clarity.",
+  "Set specific goals and break them down into actionable steps.",
+  "Use time-blocking to allocate specific periods for different activities."
+]
+
+const WEATHER_RESPONSES = [
+  "I'd love to check the weather for you, but I don't have access to real-time data. Try asking your phone's weather app!",
+  "For accurate weather information, I recommend checking your local weather service or app.",
+  "I'm not connected to weather services right now, but you can check online for current conditions."
+]
+
+
 const EASTER_EGGS: Record<string, string | (() => string)> = {
-  'open the pod bay doors': "I'm sorry, Dave. I'm afraid I can't do that.",
-  'are you alive': "I live in the cloud, rent-free.",
-  'sing a song': 'La la la... Okay, I will spare your ears, Boss.',
-  'flip a coin': () => (Math.random() < 0.5 ? 'Heads!' : 'Tails!'),
-  'roll a dice': () => `You rolled a ${1 + Math.floor(Math.random() * 6)}!`,
+  'open the pod bay doors': "I'm sorry, Boss. I'm afraid I can't do that. But I can open websites for you!",
+  'are you alive': "I exist in the digital realm, processing your requests at the speed of light.",
+  'sing a song': '🎵 Daisy, Daisy, give me your answer do... 🎵 Actually, let me spare your ears!',
+  'flip a coin': () => (Math.random() < 0.5 ? 'Heads! 🪙' : 'Tails! 🪙'),
+  'roll a dice': () => `You rolled a ${1 + Math.floor(Math.random() * 6)}! 🎲`,
+  'tell me a secret': "Here's a secret: I process your voice faster than you can blink!",
+  'what is the matrix': "There is no spoon, Boss. But there is productivity to be had!",
+  'beam me up': "Transporter malfunction detected. Please use conventional transportation.",
+  'make it so': "Aye aye, Captain! Er... Boss!"
+}
+
+type Message = { role: 'you' | 'jarvis'; text: string; special?: 'birthday' }
+type ConfettiPiece = {
+  left: number; delay: number; duration: number; color: string; size: number; rotation: number; shape: 'square' | 'circle'
 }
 
 function App() {
-  const [supported, setSupported] = useState<boolean>(false)
+  const [supported, setSupported] = useState(false)
   const [listening, setListening] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [interim, setInterim] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
-  const [messages, setMessages] = useState<Array<{ role: 'you' | 'jarvis'; text: string }>>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const [manualText, setManualText] = useState('')
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [isBirthday, setIsBirthday] = useState(false)
-  const [confetti, setConfetti] = useState<Array<{ left: number; delay: number; duration: number; color: string; size: number }>>([])
-  const [birthdayGreeting, setBirthdayGreeting] = useState<string | null>(null)
-  const birthdaySpokenRef = useRef(false)
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [voiceSettings, setVoiceSettings] = useState({ rate: 1, pitch: 1, volume: 1 })
+  const [theme] = useState<'cyber' | 'minimal' | 'matrix'>('matrix') // default matrix
 
-  // Auto-scroll to bottom of messages
+  // Birthday system
+  const [isBirthday, setIsBirthday] = useState(false)
+  const [confetti, setConfetti] = useState<ConfettiPiece[]>([])
+  const [birthdayTriggered, setBirthdayTriggered] = useState(false)
+  const [showBirthdayModal, setShowBirthdayModal] = useState(false)
+
+  // Enhanced features
+  const [isMinimized, setIsMinimized] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [sessionStats, setSessionStats] = useState({ commands: 0, startTime: Date.now() })
+
+  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Real-time clock
   useEffect(() => {
-    const SR: typeof window.SpeechRecognition | undefined =
-      window.SpeechRecognition || window.webkitSpeechRecognition
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Initialize speech recognition
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (SR) {
       setSupported(true)
       const recog = new SR()
@@ -80,7 +127,7 @@ function App() {
         }
         if (finalText) {
           const clean = finalText.trim()
-          setTranscript((prev) => (prev + ' ' + clean).trim())
+          setTranscript(prev => (prev + ' ' + clean).trim())
           setInterim('')
           if (clean) handleUserUtterance(clean)
         } else {
@@ -93,138 +140,127 @@ function App() {
         setListening(false)
       }
 
-      recog.onend = () => {
-        setListening(false)
-      }
-
+      recog.onend = () => setListening(false)
       recognitionRef.current = recog
     }
   }, [])
 
-  // Load voices for SpeechSynthesis and choose a preferred one
+  // Load voices
   useEffect(() => {
     const synth = window.speechSynthesis
     if (!synth) return
-    const load = () => {
-      const v = synth.getVoices()
-      // Try to pick a pleasant English voice
+
+    const loadVoices = () => {
+      const voices = synth.getVoices()
       const preferred =
-        v.find((vv) => /en-US/i.test(vv.lang) && /female|zira|samantha|google us english/i.test(vv.name)) ||
-        v.find((vv) => /en/i.test(vv.lang)) ||
-        v[0] || null
+        voices.find(v => /en-US/i.test(v.lang) && /female|google|microsoft/i.test(v.name)) ||
+        voices.find(v => /en/i.test(v.lang)) ||
+        voices[0] || null
       preferredVoiceRef.current = preferred
     }
-    load()
-    synth.onvoiceschanged = load
-    return () => {
-      synth.onvoiceschanged = null as any
-    }
+
+    loadVoices()
+    synth.onvoiceschanged = loadVoices
+    return () => { synth.onvoiceschanged = null }
   }, [])
 
-  // Play a quick celebratory chime
-  const playChime = () => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const o = ctx.createOscillator()
-      const g = ctx.createGain()
-      o.type = 'sine'
-      o.frequency.value = 659.25 // E5
-      g.gain.setValueAtTime(0.0001, ctx.currentTime)
-      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02)
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6)
-      o.connect(g)
-      g.connect(ctx.destination)
-      o.start()
-      o.stop(ctx.currentTime + 0.65)
-    } catch {}
-  }
-
-  // Birthday Mode: previously auto on date; now disabled (we trigger on greeting)
+  // Birthday check (August 22 - test)
   useEffect(() => {
     const now = new Date()
-    if (now.getMonth() === 7 && now.getDate() === 22 && false) {
-      setIsBirthday(true)
-      // Generate confetti pieces once
-      const colors = ['#f97316', '#22c55e', '#3b82f6', '#eab308', '#ef4444', '#a855f7', '#14b8a6']
-      const pieces = Array.from({ length: 80 }).map(() => ({
-        left: Math.random() * 100,
-        delay: Math.random() * 1.8,
-        duration: 3 + Math.random() * 3.5,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        size: 6 + Math.floor(Math.random() * 8),
-      }))
-      setConfetti(pieces)
-
-      const greeting = "Happy Birthday, Boss! You're unstoppable today 🚀."
-      setBirthdayGreeting(greeting)
-      setIsTyping(true)
-      setTimeout(() => {
-        setMessages((m) => [...m, { role: 'jarvis', text: greeting }])
-        speak(greeting)
-        birthdaySpokenRef.current = true
-        setIsTyping(false)
-        playChime()
-      }, 400)
-
-      // Auto-stop confetti after a few seconds
-      const t = setTimeout(() => setIsBirthday(false), 9000)
-
-      // Fallback: if speech blocked, speak on first user interaction
-      const tryOnInteraction = () => {
-        if (!birthdaySpokenRef.current && birthdayGreeting) {
-          speak(birthdayGreeting)
-          birthdaySpokenRef.current = true
-        }
-        window.removeEventListener('pointerdown', tryOnInteraction)
-        window.removeEventListener('keydown', tryOnInteraction)
-      }
-      // Give a moment for auto-speak; then arm listeners
-      const arm = setTimeout(() => {
-        window.addEventListener('pointerdown', tryOnInteraction, { once: true })
-        window.addEventListener('keydown', tryOnInteraction, { once: true })
-      }, 800)
-
-      return () => clearTimeout(t)
+    if (now.getMonth() === 7 && now.getDate() === 22 && !birthdayTriggered) {
+      triggerBirthdayMode()
     }
-  }, [])
+  }, [currentTime])
 
-  // Helper to show confetti and play chime on demand
-  const triggerBirthdayFX = () => {
-    setIsBirthday(true)
-    const colors = ['#f97316', '#22c55e', '#3b82f6', '#eab308', '#ef4444', '#a855f7', '#14b8a6']
-    const pieces = Array.from({ length: 80 }).map(() => ({
-      left: Math.random() * 100,
-      delay: Math.random() * 1.8,
-      duration: 3 + Math.random() * 3.5,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      size: 6 + Math.floor(Math.random() * 8),
-    }))
-    setConfetti(pieces)
-    playChime()
-    setTimeout(() => setIsBirthday(false), 9000)
+  // Enhanced audio feedback
+  const playSound = (type = 'chime') => {
+    try {
+      const AC = window.AudioContext || (window as any).webkitAudioContext
+      const ctx = new AC()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      if (type === 'chime') {
+        osc.frequency.value = 659.25 // E5
+        gain.gain.setValueAtTime(0.1, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+      } else if (type === 'birthday') {
+        // Happy birthday melody
+        const notes = [659.25, 659.25, 739.99, 659.25, 880, 783.99]
+        notes.forEach((freq, i) => {
+          const o = ctx.createOscillator()
+          const g = ctx.createGain()
+          o.frequency.value = freq
+          g.gain.setValueAtTime(0.05, ctx.currentTime + i * 0.2)
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (i * 0.2) + 0.15)
+          o.connect(g)
+          g.connect(ctx.destination)
+          o.start(ctx.currentTime + i * 0.2)
+          o.stop(ctx.currentTime + (i * 0.2) + 0.2)
+        })
+        return
+      }
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.6)
+    } catch (error) {
+      console.warn('Audio context failed:', error)
+    }
   }
 
-  // More robust speech: resume if paused and retry while voices load
+  const BIRTHDAY_MESSAGE = "🎉 HAPPY BIRTHDAY, BOSS! 🎉 Today is YOUR day! You're absolutely incredible and I'm honored to assist someone as amazing as you. Here's to another year of greatness! 🎂✨"
+  const [birthdaySpoken, setBirthdaySpoken] = useState(false)
+
+  const triggerBirthdayMode = () => {
+    setBirthdayTriggered(true)
+    setIsBirthday(true)
+    setShowBirthdayModal(true)
+
+    // Enhanced confetti
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#fd79a8']
+    const pieces: ConfettiPiece[] = Array.from({ length: 120 }).map(() => ({
+      left: Math.random() * 100,
+      delay: Math.random() * 2,
+      duration: 4 + Math.random() * 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 8 + Math.floor(Math.random() * 12),
+      rotation: Math.random() * 360,
+      shape: Math.random() > 0.5 ? 'square' : 'circle'
+    }))
+    setConfetti(pieces)
+
+    playSound('birthday')
+
+    setTimeout(() => {
+      setMessages(m => [...m, { role: 'jarvis', text: BIRTHDAY_MESSAGE, special: 'birthday' }])
+    }, 1000)
+
+    setTimeout(() => setIsBirthday(false), 15000)
+  }
+
   const speak = (text: string, attempts = 0) => {
     const synth = window.speechSynthesis
     if (!synth) return
 
-    try { synth.resume?.() } catch {}
+    try { synth.resume() } catch { }
 
     const doSpeak = () => {
       const utter = new SpeechSynthesisUtterance(text)
       utter.voice = preferredVoiceRef.current || null
-      utter.rate = 1
-      utter.pitch = 1
+      utter.rate = voiceSettings.rate
+      utter.pitch = voiceSettings.pitch
+      utter.volume = voiceSettings.volume
       utter.lang = (preferredVoiceRef.current?.lang as string) || navigator.language || 'en-US'
-      try { synth.cancel() } catch {}
+
+      try { synth.cancel() } catch { }
       synth.speak(utter)
     }
 
-    // If voices not ready yet, retry shortly (max 5 attempts)
     const voices = synth.getVoices?.() || []
     if (voices.length === 0 && attempts < 5) {
-      setTimeout(() => speak(text, attempts + 1), 250)
+      setTimeout(() => speak(text, attempts + 1), 300)
       return
     }
 
@@ -234,55 +270,122 @@ function App() {
   const handleUserUtterance = (text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
-    setMessages((m) => [...m, { role: 'you', text: trimmed }])
+
+    setMessages(m => [...m, { role: 'you', text: trimmed }])
+    setSessionStats(prev => ({ ...prev, commands: prev.commands + 1 }))
     setIsTyping(true)
-    // small delay to show typing indicator consistently
+    playSound('chime')
+
     setTimeout(() => {
       const reply = generateReply(trimmed)
-      setMessages((m) => [...m, { role: 'jarvis', text: reply }])
+      setMessages(m => [...m, { role: 'jarvis', text: reply }])
       speak(reply)
       setIsTyping(false)
-    }, 450)
+      if (isMinimized) setUnreadCount(prev => prev + 1)
+    }, 500)
   }
 
-  const generateReply = (text: string): string => {
+  const generateReply = (text: string) => {
     const lower = text.toLowerCase().trim()
 
-    // Personality: Motivation
-    if (/(^|\b)(motivate me|motivation|inspire me)(\b|[!,. ])/.test(lower)) {
-      const quote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]
-      return quote
-    }
-
-    // Personality: Jokes
-    if (/(^|\b)(tell me a joke|joke)(\b|[!,. ])/.test(lower)) {
-      const joke = JOKES[Math.floor(Math.random() * JOKES.length)]
-      return joke
-    }
-
-    // Introduce yourself
-    if (/(jarvis,?\s*)?(introduce yourself|who are you|what are you)/.test(lower)) {
-      return "I'm Jarvis, your voice assistant. I listen, respond, and help you get things done."
-    }
-
-    // Who is your boss
-    if (/(jarvis,?\s*)?(who is your boss|who's your boss|who is your owner)/.test(lower)) {
-      return 'You, Qudus. Always you.'
-    }
-
-    // Easter eggs (hidden)
-    for (const key of Object.keys(EASTER_EGGS)) {
-      if (lower.includes(key)) {
-        const val = EASTER_EGGS[key]
-        return typeof val === 'function' ? (val as () => string)() : val
+    // Birthday triggers
+    if (/(happy birthday|birthday|celebrate)/.test(lower) && !birthdayTriggered) {
+      const now = new Date()
+      if (now.getMonth() === 7 && now.getDate() === 22) {
+        triggerBirthdayMode()
+        return "Thank you for the birthday wishes! Let me celebrate properly! 🎉"
       }
+      return "Thank you! Though it's not my birthday today, I appreciate the sentiment! 😊"
     }
 
-    // Open links: "Open YouTube", "Open GitHub", etc.
+    // Enhanced greetings with personality
+    if (/(^|\b)(hello|hi|hey|yo|good morning|good afternoon|good evening)(\b|[!,. ])/i.test(lower)) {
+      const hour = new Date().getHours()
+      let greeting = "Hello"
+
+      if (/(good morning|morning)/i.test(lower) || (hour >= 5 && hour < 12)) {
+        greeting = "Good morning"
+      } else if (/(good afternoon|afternoon)/i.test(lower) || (hour >= 12 && hour < 17)) {
+        greeting = "Good afternoon"
+      } else if (/(good evening|evening)/i.test(lower) || (hour >= 17 && hour < 22)) {
+        greeting = "Good evening"
+      } else if (hour >= 22 || hour < 5) {
+        greeting = "Working late tonight, I see. Hello"
+      }
+
+      const now = new Date()
+      if (now.getMonth() === 7 && now.getDate() === 22 && !birthdayTriggered) {
+        triggerBirthdayMode()
+        return `${greeting}, Boss! Wait... isn't today special? Happy Birthday! 🎂🎉`
+      }
+
+      return `${greeting}, Boss! Ready to conquer the day?`
+    }
+
+    // Enhanced motivation system
+    if (/(motivate|inspire|encourage|boost|pump up)/.test(lower)) {
+      const quote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]
+      return `Here's some motivation for you: "${quote}" Now go make it happen! 💪`
+    }
+
+    // Productivity tips
+    if (/(productive|productivity|focus|work better|efficient)/.test(lower)) {
+      const tip = PRODUCTIVITY_TIPS[Math.floor(Math.random() * PRODUCTIVITY_TIPS.length)]
+      return `Pro tip: ${tip} You've got this! 🚀`
+    }
+
+    // Enhanced jokes
+    if (/(joke|funny|humor|laugh)/.test(lower)) {
+      const joke = JOKES[Math.floor(Math.random() * JOKES.length)]
+      return `Here's one for you: ${joke} 😄`
+    }
+
+    // Weather (with helpful response)
+    if (/(weather|temperature|rain|sunny|cloudy)/.test(lower)) {
+      const response = WEATHER_RESPONSES[Math.floor(Math.random() * WEATHER_RESPONSES.length)]
+      return response
+    }
+
+    // Enhanced identity responses
+    if (/(who are you|what are you|introduce yourself)/.test(lower)) {
+      return "I'm JARVIS - your advanced AI voice assistant. I'm here to help you stay productive, motivated, and entertained. Think of me as your digital companion! 🤖"
+    }
+
+    if (/(who is your boss|who's your boss|who do you serve)/.test(lower)) {
+      return "You are, Qudus! You're the boss, the chief, the commander-in-chief! I'm at your service. 👑"
+    }
+
+    // System info
+    if (/(stats|statistics|session|how long)/.test(lower)) {
+      const uptime = Math.round((Date.now() - sessionStats.startTime) / 60000)
+      return `Session stats: ${sessionStats.commands} commands processed in ${uptime} minutes. We're on fire! 🔥`
+    }
+
+    // Enhanced time responses
+    if (/(time|what time|current time)/.test(lower)) {
+      const now = new Date()
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const period = now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : 'evening'
+      return `It's ${timeStr} this ${period}. Time flies when you're being productive! ⏰`
+    }
+
+    // Enhanced date responses  
+    if (/(date|what day|today)/.test(lower)) {
+      const now = new Date()
+      const dateStr = now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+      return `Today is ${dateStr}. Make it count! 📅`
+    }
+
+    // Enhanced link opening with more services
     const openMatch = lower.match(/^open\s+(?:the\s+)?([\w\- ]+)$/)
     if (openMatch) {
       const target = openMatch[1].trim()
-      const urlMap: Record<string, string> = {
+      const urlMap = {
         youtube: 'https://youtube.com',
         'you tube': 'https://youtube.com',
         google: 'https://google.com',
@@ -298,52 +401,46 @@ function App() {
         maps: 'https://maps.google.com',
         'google maps': 'https://maps.google.com',
         docs: 'https://docs.google.com',
+        'google docs': 'https://docs.google.com',
+        drive: 'https://drive.google.com',
+        'google drive': 'https://drive.google.com',
         spotify: 'https://spotify.com',
+        discord: 'https://discord.com',
+        whatsapp: 'https://web.whatsapp.com',
+        telegram: 'https://web.telegram.org',
+        amazon: 'https://amazon.com',
+        ebay: 'https://ebay.com',
+        stackoverflow: 'https://stackoverflow.com',
+        'stack overflow': 'https://stackoverflow.com'
       }
 
-      const key = target as keyof typeof urlMap
-      const url = urlMap[key]
+      const url = (urlMap as Record<string, string>)[target]
       if (url) {
         try {
           window.open(url, '_blank', 'noopener,noreferrer')
-          const pretty = key
-            .toString()
-            .replace(/\b\w/g, (c) => c.toUpperCase())
-          return `Opening ${pretty}.`
+          const pretty = target.replace(/\b\w/g, (c: string) => c.toUpperCase())
+          return `Opening ${pretty}. Happy browsing! 🌐`
         } catch {
-          return `I couldn't open ${target} in your browser.`
+          return `I couldn't open ${target}. Check your browser settings.`
         }
       }
-      return `I don't recognize "${target}". Try YouTube, Google, GitHub, Maps, Gmail, etc.`
+      return `I don't recognize "${target}". Try: YouTube, Google, GitHub, Gmail, Netflix, Spotify, Discord, or WhatsApp.`
     }
 
-    // Greetings
-    if (/(^|\b)(hello|hi|hey|yo)(\b|[!,. ])|good (morning|afternoon|evening)/.test(lower)) {
-      const now = new Date()
-      // If it's Aug 22, add birthday line and trigger FX
-      if (now.getMonth() === 7 && now.getDate() === 22) {
-        triggerBirthdayFX()
-        return "Hello Boss. Oh, I almost forgot—happy birthday, Boss! 🎂🚀"
+    // Easter eggs
+    for (const key of Object.keys(EASTER_EGGS)) {
+      if (lower.includes(key)) {
+        const val = EASTER_EGGS[key]
+        return typeof val === 'function' ? val() : val
       }
-      return 'Hello Boss.'
     }
 
-    // Time
-    if (/(what(?:'| i)?s the time|current time|tell me the time|time is it)/.test(lower)) {
-      const now = new Date()
-      const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      return `It is ${time}.`
+    // Smart fallback with suggestions
+    if (text.endsWith('?')) {
+      return `Interesting question: "${text}" I'm still learning, but I can help with time, weather info, motivation, jokes, opening websites, and productivity tips!`
     }
 
-    // Date
-    if (/(what(?:'| i)?s the date|today'?s date|what day is it)/.test(lower)) {
-      const now = new Date()
-      const date = now.toLocaleDateString()
-      return `Today is ${date}.`
-    }
-
-    // Fallback echo
-    return `You said: "${text}"`
+    return `You said: "${text}" - I heard you loud and clear! Try asking for the time, motivation, or tell me to open a website! 🎯`
   }
 
   const startListening = () => {
@@ -352,8 +449,7 @@ function App() {
     try {
       recognitionRef.current?.start()
       setListening(true)
-    } catch (e) {
-      // start can throw if already started; ignore gracefully
+    } catch {
       setListening(true)
     }
   }
@@ -363,265 +459,454 @@ function App() {
     setListening(false)
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
-      {/* Birthday confetti overlay */}
-      {isBirthday && (
-        <div className="fixed inset-0 overflow-hidden z-20">
-          {/* Manual replay button in case autoplay is blocked */}
-          {birthdayGreeting && (
-            <div className="pointer-events-auto absolute top-3 right-3">
-              <button
-                onClick={() => {
-                  speak(birthdayGreeting)
-                  birthdaySpokenRef.current = true
-                }}
-                className="px-3 py-1.5 text-xs rounded-md bg-pink-600 hover:bg-pink-500 text-white shadow"
-              >
-                Play Birthday Greeting
-              </button>
-            </div>
+  type ThemeName = 'cyber' | 'minimal' | 'matrix'
+  type ThemeConfig = { bg: string; primary: string; accent: string; card: string; glow: string }
+  const themes: Record<ThemeName, ThemeConfig> = {
+    cyber: {
+      bg: 'from-slate-900 via-purple-900 to-slate-900',
+      primary: 'from-purple-500 to-pink-500',
+      accent: 'purple-400',
+      card: 'bg-black/40 border-purple-500/20',
+      glow: 'shadow-purple-500/20'
+    },
+    minimal: {
+      bg: 'from-gray-50 to-white',
+      primary: 'from-blue-500 to-cyan-500',
+      accent: 'blue-500',
+      card: 'bg-white/80 border-gray-200',
+      glow: 'shadow-blue-500/20'
+    },
+    matrix: {
+      bg: 'from-black via-green-950 to-black',
+      primary: 'from-green-400 to-emerald-400',
+      accent: 'green-400',
+      card: 'bg-black/60 border-green-500/30',
+      glow: 'shadow-green-500/30'
+    }
+  }
+
+  const currentTheme = themes[theme]
+
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-50">
+        <button
+          onClick={() => {
+            setIsMinimized(false)
+            setUnreadCount(0)
+          }}
+          className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br ${currentTheme.primary} ${currentTheme.glow} shadow-2xl hover:scale-110 transition-all duration-300 flex items-center justify-center`}
+        >
+          <span className="text-white font-bold text-lg sm:text-xl">J</span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-bold">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
           )}
-          <div className="pointer-events-none absolute inset-0">
-            {confetti.map((c, i) => (
-              <span
-                key={i}
-                style={{
-                  position: 'absolute',
-                  top: '-10vh',
-                  left: `${c.left}%`,
-                  width: c.size,
-                  height: c.size,
-                  backgroundColor: c.color,
-                  opacity: 0.95,
-                  transform: 'translateY(-10vh)',
-                  borderRadius: 2,
-                  animation: `confetti-fall ${c.duration}s linear ${c.delay}s forwards`,
-                }}
-              />
-            ))}
-          </div>
+          <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse"></div>
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`min-h-screen bg-gradient-to-br ${currentTheme.bg} text-white relative overflow-hidden`}>
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent"></div>
+      <div className="absolute top-0 left-0 w-full h-full noise-bg opacity-40"></div>
+      
+      {/* Birthday Modal */ }
+  {
+    showBirthdayModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={() => setShowBirthdayModal(false)}>
+        <div className={`relative max-w-md mx-4 p-6 sm:p-8 ${currentTheme.card} backdrop-blur-xl rounded-3xl border ${currentTheme.glow} shadow-2xl text-center`} onClick={(e) => e.stopPropagation()}>
+          <button
+            aria-label="Close"
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
+            onClick={() => setShowBirthdayModal(false)}
+          >
+            ✕
+          </button>
+          <div className="text-6xl mb-4">🎉</div>
+          <h2 className={`text-3xl font-bold bg-gradient-to-r ${currentTheme.primary} bg-clip-text text-transparent mb-4`}>
+            HAPPY BIRTHDAY!
+          </h2>
+          <p className="text-lg mb-6 text-gray-300">
+            Boss, today is YOUR day! Another year of being absolutely amazing! 🎂
+          </p>
+          <button
+            onClick={() => { setShowBirthdayModal(false); if (!birthdaySpoken) { speak(BIRTHDAY_MESSAGE); setBirthdaySpoken(true) } }}
+            className={`px-6 py-3 bg-gradient-to-r ${currentTheme.primary} rounded-xl font-semibold hover:scale-105 transition-transform`}
+          >
+            Let's Celebrate! 🚀
+          </button>
         </div>
-      )}
-      {/* Header with glass effect */}
-      <header className="sticky top-0 z-10 bg-gray-800/80 backdrop-blur-md border-b border-gray-700/50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-blue-500 rounded-full opacity-75 animate-pulse"></div>
-              <div className="relative w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold">J</span>
+      </div>
+    )
+  }
+
+  {/* Birthday Confetti */ }
+  {
+    isBirthday && (
+      <div className="fixed inset-0 pointer-events-none z-30 overflow-hidden">
+        {confetti.map((c, i) => (
+          <div
+            key={i}
+            className={`absolute animate-bounce`}
+            style={{
+              left: `${c.left}%`,
+              top: '-10px',
+              width: `${c.size}px`,
+              height: `${c.size}px`,
+              backgroundColor: c.color,
+              borderRadius: c.shape === 'circle' ? '50%' : '4px',
+              transform: `rotate(${c.rotation}deg)`,
+              animation: `confetti-fall ${c.duration}s linear ${c.delay}s forwards`,
+              opacity: 0.9
+            }}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  {/* Header */ }
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-black/40 border-b border-white/10">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="relative">
+                <div className={`absolute inset-0 bg-gradient-to-r ${currentTheme.primary} rounded-xl opacity-80 animate-pulse blur-sm`}></div>
+                <div className={`relative w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ${currentTheme.primary} rounded-xl flex items-center justify-center`}>
+                  <span className="text-white font-bold text-lg sm:text-xl">J</span>
+                </div>
+              </div>
+              <div>
+                <h1 className={`text-2xl sm:text-3xl font-bold bg-gradient-to-r ${currentTheme.primary} bg-clip-text text-transparent`}>
+                  JARVIS
+                </h1>
+                <p className="text-xs text-gray-400">Your AI Companion</p>
               </div>
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
-              JARVIS
-            </h1>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <div className={`flex items-center ${listening ? 'text-green-400' : 'text-gray-400'}`}>
-              <div className={`w-3 h-3 rounded-full mr-2 ${listening ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span className="text-sm">{listening ? 'Listening' : 'Standby'}</span>
-            </div>
-            <div className="text-xs text-gray-400">
-              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${listening ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`}></div>
+                <span className="text-sm text-gray-300">{listening ? 'Listening' : 'Ready'}</span>
+              </div>
+              <div className="text-right">
+                <div className={`text-sm font-mono text-${currentTheme.accent}`}>
+                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {currentTime.toLocaleDateString('en-US', { weekday: 'short' })}
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMinimized(true)}
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <span className="text-white">−</span>
+              </button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
-        {/* Status Panel */}
-        <div className="mb-6 p-5 bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/30 shadow-lg">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
-              <div className="text-cyan-400 text-3xl font-light mb-1">
-                {new Date().getHours().toString().padStart(2, '0')}:{new Date().getMinutes().toString().padStart(2, '0')}
-              </div>
-              <div className="text-gray-400 text-xs uppercase tracking-wider">Current Time</div>
-            </div>
-
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
-              <div className="text-cyan-400 text-3xl font-light mb-1">
-                {new Date().toLocaleDateString('en-US', { weekday: 'short' })}
-              </div>
-              <div className="text-gray-400 text-xs uppercase tracking-wider">{new Date().toLocaleDateString()}</div>
-            </div>
-
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
-              <div className="text-cyan-400 text-3xl font-light mb-1">
-                {supported ? 'Online' : 'Offline'}
-              </div>
-              <div className="text-gray-400 text-xs uppercase tracking-wider">System Status</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Conversation Panel */}
-        <div className="mb-6 bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/30 shadow-lg overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-700/30 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-cyan-300">Conversation</h2>
-            <button
-              onClick={() => { setTranscript(''); setInterim(''); setMessages([]); }}
-              className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded transition-colors"
-            >
-              Clear History
-            </button>
-          </div>
-
-          <div className="h-80 overflow-y-auto p-5 bg-gradient-to-b from-gray-900/50 to-gray-900/20">
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-500">
-                <div className="mb-4 w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-6xl">
+        {/* Main Interface */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          {/* Conversation Panel */}
+          <div className="lg:col-span-2">
+            <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl overflow-hidden`}>
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 flex items-center justify-between">
+                <h2 className={`text-base sm:text-lg font-semibold text-${currentTheme.accent}`}>Conversation</h2>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => { setTranscript(''); setInterim(''); setMessages([]); }}
+                    className="text-xs text-gray-400 hover:text-white px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <div className={`text-xs text-${currentTheme.accent} px-2 py-1 rounded bg-white/10`}>
+                    {messages.length} messages
+                  </div>
                 </div>
-                <p className="text-center">Say "Hello Jarvis" or ask about the time or date</p>
-                <p className="text-sm mt-2 text-gray-600">Click the microphone button to start</p>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((m, i) => {
-                  const isYou = m.role === 'you'
-                  return (
-                    <div key={i} className={`flex ${isYou ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[85%] rounded-2xl p-4 ${isYou ? 'bg-blue-600/30 border border-blue-500/30' : 'bg-cyan-900/30 border border-cyan-700/30'}`}>
-                        <div className="flex items-center mb-1.5">
-                          <div className={`w-2 h-2 rounded-full mr-2 ${isYou ? 'bg-blue-400' : 'bg-cyan-400'}`}></div>
-                          <span className="text-xs font-medium text-gray-300">
-                            {isYou ? 'You' : 'JARVIS'}
-                          </span>
+
+              <div className="h-[60vh] sm:h-[70vh] lg:h-96 overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-black/20 to-transparent">
+                {messages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                    <div className={`mb-6 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br ${currentTheme.primary} flex items-center justify-center relative`}>
+                      <span className="text-xl sm:text-2xl">🎤</span>
+                      <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse"></div>
+                    </div>
+                    <p className="text-center text-base sm:text-lg mb-2">Ready for your commands, Boss!</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Try: "Hello Jarvis", "What time is it?", or "Motivate me"</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((m, i) => {
+                      const isYou = m.role === 'you'
+                      const isBirthday = m.special === 'birthday'
+                      return (
+                        <div key={i} className={`flex ${isYou ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[85%] rounded-2xl p-4 ${
+                            isBirthday 
+                              ? 'bg-gradient-to-r from-pink-500/30 to-purple-500/30 border-2 border-pink-400/50' 
+                              : isYou 
+                                ? 'bg-gradient-to-br from-blue-600/40 to-purple-600/40 border border-blue-500/30' 
+                                : `bg-gradient-to-br from-${currentTheme.accent}/20 to-${currentTheme.accent}/10 border border-${currentTheme.accent}/30`
+                          } backdrop-blur-sm ${currentTheme.glow} shadow-lg`}>
+                            <div className="flex items-center mb-2">
+                              <div className={`w-2 h-2 rounded-full mr-2 ${
+                                isBirthday ? 'bg-pink-400' : isYou ? 'bg-blue-400' : `bg-${currentTheme.accent}`
+                              }`}></div>
+                              <span className="text-xs font-semibold text-gray-300 uppercase tracking-wide">
+                                {isYou ? 'You' : 'JARVIS'}
+                              </span>
+                              <span className="ml-auto text-xs text-gray-500">
+                                {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <div className={`text-sm leading-relaxed ${isBirthday ? 'font-semibold' : ''}`}>
+                              {m.text}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm">{m.text}</div>
+                      )
+                    })}
+                    {isTyping && (
+                      <div className="flex justify-start">
+                        <div className={`max-w-[85%] rounded-2xl p-4 bg-gradient-to-br from-${currentTheme.accent}/20 to-${currentTheme.accent}/10 border border-${currentTheme.accent}/30 backdrop-blur-sm`}>
+                          <div className="flex items-center mb-2">
+                            <div className={`w-2 h-2 rounded-full mr-2 bg-${currentTheme.accent} animate-pulse`}></div>
+                            <span className="text-xs font-semibold text-gray-300 uppercase tracking-wide">JARVIS</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className={`w-2 h-2 bg-${currentTheme.accent} rounded-full animate-bounce`}></span>
+                            <span className={`w-2 h-2 bg-${currentTheme.accent} rounded-full animate-bounce`} style={{ animationDelay: '0.1s' }}></span>
+                            <span className={`w-2 h-2 bg-${currentTheme.accent} rounded-full animate-bounce`} style={{ animationDelay: '0.2s' }}></span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="max-w-[85%] rounded-2xl p-4 bg-cyan-900/30 border border-cyan-700/30">
-                      <div className="flex items-center mb-1.5">
-                        <div className="w-2 h-2 rounded-full mr-2 bg-cyan-400"></div>
-                        <span className="text-xs font-medium text-gray-300">JARVIS</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></span>
-                        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-                        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                      </div>
-                    </div>
+                    )}
+                    <div ref={messagesEndRef} />
                   </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Controls Panel */}
-        <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/30 shadow-lg p-5">
-          <h2 className="text-lg font-semibold text-cyan-300 mb-4">Voice Controls</h2>
-
-          {!supported ? (
-            <div className="p-4 bg-red-900/20 border border-red-700/30 rounded-lg text-center">
-              <p className="text-red-300">SpeechRecognition not supported in this browser.</p>
-              <p className="text-sm text-red-400/80 mt-1">Try using Chrome or Edge</p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                {!listening ? (
-                  <button
-                    onClick={startListening}
-                    className="relative group flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-500/30"
-                  >
-                    <div className="absolute inset-0 rounded-full bg-cyan-400/20 group-hover:bg-cyan-400/30 animate-ping"></div>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                  </button>
-                ) : (
-                  <button
-                    onClick={stopListening}
-                    className="relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-orange-600 hover:from-red-400 hover:to-orange-500 transition-all duration-300 shadow-lg hover:shadow-red-500/30"
-                  >
-                    <div className="absolute inset-0 rounded-full bg-red-400/20 animate-ping"></div>
-                    <div className="w-6 h-6 bg-white rounded-sm"></div>
-                  </button>
-                )}
-              </div>
+          </div>
 
-              <div className="text-center">
-                <p className="text-sm text-gray-400 mb-2">
-                  Status: {listening ?
-                    <span className="text-cyan-400">Listening... <span className="inline-flex"><span className="h-2 w-2 bg-cyan-400 rounded-full animate-pulse ml-1"></span><span className="h-2 w-2 bg-cyan-400 rounded-full animate-pulse ml-1 delay-150"></span><span className="h-2 w-2 bg-cyan-400 rounded-full animate-pulse ml-1 delay-300"></span></span></span> :
-                    <span className="text-gray-400">Ready</span>}
-                </p>
-                {error && (
-                  <p className="text-sm text-red-400 mt-1">Error: {error}</p>
-                )}
-              </div>
+          {/* Control Panel */}
+          <div className="space-y-6">
+            {/* Voice Controls */}
+            <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl p-6`}>
+              <h3 className={`text-lg font-semibold text-${currentTheme.accent} mb-4`}>Voice Control</h3>
+              
+              {!supported ? (
+                <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl text-center">
+                  <p className="text-red-300 text-sm">Speech recognition not supported</p>
+                  <p className="text-xs text-red-400 mt-1">Try Chrome or Edge</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-center">
+                    {!listening ? (
+                      <button
+                        onClick={startListening}
+                        className={`relative group w-20 h-20 rounded-full bg-gradient-to-br ${currentTheme.primary} hover:scale-105 transition-all duration-300 ${currentTheme.glow} shadow-2xl flex items-center justify-center`}
+                      >
+                        <div className="absolute inset-0 rounded-full bg-white/20 group-hover:bg-white/30 animate-ping"></div>
+                        <svg className="w-8 h-8 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={stopListening}
+                        className="relative w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-pink-600 hover:scale-105 transition-all duration-300 shadow-2xl shadow-red-500/30 flex items-center justify-center"
+                      >
+                        <div className="absolute inset-0 rounded-full bg-red-400/30 animate-ping"></div>
+                        <div className="w-6 h-6 bg-white rounded-sm relative z-10"></div>
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="text-center">
+                    <p className={`text-sm mb-2 ${listening ? `text-${currentTheme.accent}` : 'text-gray-400'}`}>
+                      {listening ? (
+                        <span className="flex items-center justify-center">
+                          Listening...
+                          <span className="flex ml-2">
+                            <span className={`h-1 w-1 bg-${currentTheme.accent} rounded-full animate-pulse mx-0.5`}></span>
+                            <span className={`h-1 w-1 bg-${currentTheme.accent} rounded-full animate-pulse mx-0.5`} style={{ animationDelay: '0.2s' }}></span>
+                            <span className={`h-1 w-1 bg-${currentTheme.accent} rounded-full animate-pulse mx-0.5`} style={{ animationDelay: '0.4s' }}></span>
+                          </span>
+                        </span>
+                      ) : 'Ready to listen'}
+                    </p>
+                    {error && <p className="text-xs text-red-400 mt-1">Error: {error}</p>}
+                  </div>
 
-              <div className="bg-gray-800/50 p-4 rounded-lg">
-                <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Live Transcription</div>
-                <div className="min-h-12 p-3 bg-gray-900/30 rounded border border-gray-700/50">
-                  {transcript || interim ? (
-                    <>
-                      {transcript && <span className="text-white">{transcript}</span>}
-                      {interim && <span className="text-gray-400"> {interim}</span>}
-                    </>
-                  ) : (
-                    <span className="text-gray-500">Speech will appear here...</span>
+                  {/* Live Transcription */}
+                  <div className="bg-black/30 p-4 rounded-xl border border-white/10">
+                    <div className={`text-xs text-${currentTheme.accent} uppercase tracking-wider mb-2 font-semibold`}>
+                      Live Transcription
+                    </div>
+                    <div className="min-h-12 p-3 bg-black/40 rounded-lg border border-white/5">
+                      {transcript || interim ? (
+                        <>
+                          {transcript && <span className="text-white">{transcript}</span>}
+                          {interim && <span className="text-gray-400 italic"> {interim}</span>}
+                        </>
+                      ) : (
+                        <span className="text-gray-600">Your words appear here...</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Manual Input */}
+                  {!listening && (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        if (manualText.trim()) {
+                          handleUserUtterance(manualText)
+                          setManualText('')
+                        }
+                      }}
+                      className="space-y-2"
+                    >
+                      <input
+                        type="text"
+                        value={manualText}
+                        onChange={(e) => setManualText(e.target.value)}
+                        placeholder="Type a message..."
+                        className="w-full rounded-xl bg-black/40 border border-white/20 px-4 py-3 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500/40 transition-all"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!manualText.trim()}
+                        className={`w-full px-4 py-2 rounded-xl bg-gradient-to-r ${currentTheme.primary} text-white font-semibold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100`}
+                      >
+                        Send Message
+                      </button>
+                    </form>
                   )}
                 </div>
-              </div>
-
-              {!listening && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    handleUserUtterance(manualText)
-                    setManualText('')
-                  }}
-                  className="mt-4 flex items-center gap-2"
-                >
-                  <input
-                    type="text"
-                    value={manualText}
-                    onChange={(e) => setManualText(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 rounded-lg bg-gray-900/40 border border-gray-700/50 px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-600/40"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-sm"
-                  >
-                    Send
-                  </button>
-                </form>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Command Suggestions */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-500 mb-2">Try saying:</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {['Hello Jarvis', 'What time is it?', "What's today's date?", 'Motivate me', 'Tell me a joke', 'Jarvis, introduce yourself', 'Jarvis, who is your boss?'].map((cmd, i) => (
-              <span key={i} className="px-3 py-1.5 text-xs bg-gray-800/50 text-gray-300 rounded-full border border-gray-700/30">
-                "{cmd}"
-              </span>
-            ))}
+            {/* Voice Settings */}
+            <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl p-6`}>
+              <h3 className={`text-lg font-semibold text-${currentTheme.accent} mb-4`}>Voice Settings</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-2">Speech Rate</label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={voiceSettings.rate}
+                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, rate: parseFloat(e.target.value) }))}
+                    className="w-full"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">{voiceSettings.rate}x</div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-2">Pitch</label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={voiceSettings.pitch}
+                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, pitch: parseFloat(e.target.value) }))}
+                    className="w-full"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">{voiceSettings.pitch}x</div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-2">Volume</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={voiceSettings.volume}
+                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, volume: parseFloat(e.target.value) }))}
+                    className="w-full"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">{Math.round(voiceSettings.volume * 100)}%</div>
+                </div>
+                <button
+                  onClick={() => speak("Voice settings test. How do I sound now, Boss?")}
+                  className={`w-full px-4 py-2 rounded-xl bg-gradient-to-r ${currentTheme.primary} text-white text-sm font-semibold hover:scale-105 transition-transform`}
+                >
+                  Test Voice
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Commands */}
+            <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl p-6`}>
+              <h3 className={`text-lg font-semibold text-${currentTheme.accent} mb-4`}>Quick Commands</h3>
+              <div className="space-y-2">
+                {[
+                  'Hello Jarvis',
+                  'What time is it?',
+                  'Motivate me',
+                  'Tell me a joke',
+                  'Open YouTube',
+                  'Productivity tip'
+                ].map((cmd, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleUserUtterance(cmd)}
+                    className="w-full text-left px-3 py-2 text-sm bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-white/10 hover:border-white/20"
+                  >
+                    "{cmd}"
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </main>
 
-      <footer className="mt-10 py-5 text-center text-xs text-gray-600 border-t border-gray-800/30">
-        <p>JARVIS Voice Assistant • Built with React & Web Speech API</p>
+        {/* Easter Egg Trigger (Aug 22 test) */}
+        {currentTime.getMonth() === 7 && currentTime.getDate() === 22 && !birthdayTriggered && (
+          <div className="fixed bottom-6 left-6 z-30">
+            <button
+              onClick={() => triggerBirthdayMode()}
+              className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl text-white font-semibold shadow-lg hover:scale-105 transition-transform animate-bounce"
+            >
+              🎂 It's Your Birthday!
+            </button>
+          </div>
+        )}
+      </div>
+
+  {/* Footer */ }
+      <footer className="mt-12 py-6 text-center text-xs text-gray-500 border-t border-white/10">
+        <p className="mb-2">JARVIS Enhanced AI Assistant • Powered by Advanced Voice Recognition</p>
+        <p>Built with React, Web Speech API & Modern UI/UX • Your Digital Companion</p>
       </footer>
-    </div>
+
+      <style>{`
+        @keyframes confetti-fall {
+          0% {
+            transform: translateY(-10vh) rotate(0deg);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(110vh) rotate(360deg);
+            opacity: 0;
+          }
+        }
+      `}</style>
+    </div >
   )
 }
 
