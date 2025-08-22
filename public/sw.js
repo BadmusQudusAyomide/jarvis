@@ -1,5 +1,5 @@
 /* Simple service worker for Vite + React PWA */
-const CACHE_NAME = 'jarvis-cache-v1';
+const CACHE_NAME = 'jarvis-cache-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -35,22 +35,57 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Only cache same-origin requests
-  const sameOrigin = new URL(request.url).origin === self.location.origin;
+  const url = new URL(request.url);
+  const sameOrigin = url.origin === self.location.origin;
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request)
-        .then((response) => {
-          // Only cache successful same-origin responses
-          if (sameOrigin && response && response.ok) {
-            const copy = response.clone();
+  // Network-first for navigations (HTML). Prevents stale app shell.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        try {
+          const networkResponse = await fetch(request);
+          // Optionally cache successful navigations
+          if (networkResponse && networkResponse.ok) {
+            const copy = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }
-          return response;
-        })
-        .catch(() => caches.match('/index.html'));
-    })
+          return networkResponse;
+        } catch (_) {
+          // Fallback to cache, then offline shell
+          const cached = await caches.match(request);
+          return (
+            cached ||
+            (await caches.match('/index.html')) ||
+            new Response('Offline', { status: 503, statusText: 'Offline' })
+          );
+        }
+      })()
+    );
+    return;
+  }
+
+  // For other GET requests: cache-first for same-origin; network for cross-origin
+  event.respondWith(
+    (async () => {
+      if (sameOrigin) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        try {
+          const resp = await fetch(request);
+          if (resp && resp.ok) {
+            const copy = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return resp;
+        } catch (_) {
+          // If offline and not cached, try app shell
+          const fallback = await caches.match('/index.html');
+          return fallback || new Response('Offline', { status: 503 });
+        }
+      } else {
+        // Cross-origin: just go to network
+        return fetch(request).catch(() => new Response('Offline', { status: 503 }));
+      }
+    })()
   );
 });
