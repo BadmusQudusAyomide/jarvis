@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Mic, MicOff, Trash2, Volume2, Settings, Power } from 'lucide-react'
 
 function App() {
   const [supported, setSupported] = useState<boolean>(false)
@@ -8,11 +7,11 @@ function App() {
   const [interim, setInterim] = useState('')
   const [error, setError] = useState<string | null>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
-  const [messages, setMessages] = useState<Array<{ role: 'you' | 'jarvis'; text: string; timestamp: Date }>>([])
+  const [messages, setMessages] = useState<Array<{ role: 'you' | 'jarvis'; text: string }>>([])
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Auto-scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -56,12 +55,10 @@ function App() {
       recog.onerror = (e: any) => {
         setError(e?.error || 'speech_error')
         setListening(false)
-        setIsProcessing(false)
       }
 
       recog.onend = () => {
         setListening(false)
-        setIsProcessing(false)
       }
 
       recognitionRef.current = recog
@@ -101,72 +98,36 @@ function App() {
   }
 
   const handleUserUtterance = (text: string) => {
-    setIsProcessing(true)
-    const userMessage = { role: 'you' as const, text, timestamp: new Date() }
-    setMessages((m) => [...m, userMessage])
-
-    // Simulate processing delay for more realistic feel
-    setTimeout(() => {
-      const reply = generateReply(text)
-      const jarvisMessage = { role: 'jarvis' as const, text: reply, timestamp: new Date() }
-      setMessages((m) => [...m, jarvisMessage])
-      speak(reply)
-      setIsProcessing(false)
-    }, 500)
+    setMessages((m) => [...m, { role: 'you', text }])
+    const reply = generateReply(text)
+    setMessages((m) => [...m, { role: 'jarvis', text: reply }])
+    speak(reply)
   }
 
   const generateReply = (text: string): string => {
     const lower = text.toLowerCase()
-
-    // Enhanced responses with more personality
+    // Greetings
     if (/(hello|hi|hey|yo)[!,. ]?|good (morning|afternoon|evening)/.test(lower)) {
-      const greetings = [
-        "Hello Boss, how can I assist you today?",
-        "Good to see you again. What do you need?",
-        "At your service. How may I help?",
-        "Hello there! Ready to get things done?"
-      ]
-      return greetings[Math.floor(Math.random() * greetings.length)]
+      return 'Hello Boss, how are you today?'
     }
-
+    // Time
     if (/what(?:'| i)?s the time|current time|tell me the time/.test(lower)) {
       const now = new Date()
       const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      return `The current time is ${time}.`
+      return `It is ${time}.`
     }
-
+    // Date
     if (/what(?:'| i)?s the date|today'?s date|what day is it/.test(lower)) {
       const now = new Date()
-      const options: Intl.DateTimeFormatOptions = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }
-      const date = now.toLocaleDateString(undefined, options)
+      const date = now.toLocaleDateString()
       return `Today is ${date}.`
     }
-
-    if (/weather/.test(lower)) {
-      return "I'd need access to weather data to provide that information. Is there something else I can help you with?"
+    // Weather (placeholder)
+    if (/weather|temperature|how.*outside/.test(lower)) {
+      return "I'm not connected to weather services yet, but I can help you implement that feature."
     }
-
-    if (/(thank you|thanks|appreciate)/.test(lower)) {
-      return "You're welcome! Anything else I can do for you?"
-    }
-
-    if (/(goodbye|bye|see you|exit)/.test(lower)) {
-      return "Goodbye! Have a great day!"
-    }
-
-    // Enhanced fallback with suggestions
-    const suggestions = [
-      "Try asking about the time, date, or say hello!",
-      "I'm still learning. You can ask about time, date, or just chat with me.",
-      "I heard you, but I'm not sure how to respond to that yet. Try asking about the current time!"
-    ]
-    const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)]
-    return `You said: "${text}". ${suggestion}`
+    // Fallback echo
+    return `You said: "${text}"`
   }
 
   const startListening = () => {
@@ -176,6 +137,7 @@ function App() {
       recognitionRef.current?.start()
       setListening(true)
     } catch (e) {
+      // start can throw if already started; ignore gracefully
       setListening(true)
     }
   }
@@ -185,187 +147,186 @@ function App() {
     setListening(false)
   }
 
-  const clearAll = () => {
-    setTranscript('')
-    setInterim('')
-    setMessages([])
-    setError(null)
-  }
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }
-
-  if (!supported) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 max-w-md text-center">
-          <div className="text-red-400 text-6xl mb-4">⚠️</div>
-          <h2 className="text-red-400 text-xl font-semibold mb-2">Voice Recognition Not Supported</h2>
-          <p className="text-red-300/80">Your browser doesn't support speech recognition. Please try Chrome, Edge, or Safari.</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
-      {/* Header */}
-      <header className="border-b border-white/10 backdrop-blur-xl bg-white/5">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
-              <span className="text-lg font-bold">J</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
+      {/* Header with glass effect */}
+      <header className="sticky top-0 z-10 bg-gray-800/80 backdrop-blur-md border-b border-gray-700/50">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500 rounded-full opacity-75 animate-pulse"></div>
+              <div className="relative w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold">J</span>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                JARVIS
-              </h1>
-              <p className="text-xs text-white/60">Voice Assistant</p>
-            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+              JARVIS
+            </h1>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm text-green-300 font-medium">Online</span>
+          <div className="flex items-center space-x-4">
+            <div className={`flex items-center ${listening ? 'text-green-400' : 'text-gray-400'}`}>
+              <div className={`w-3 h-3 rounded-full mr-2 ${listening ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span className="text-sm">{listening ? 'Listening' : 'Standby'}</span>
             </div>
-
-            <div className="flex gap-2">
-              <button className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/10">
-                <Settings className="w-4 h-4" />
-              </button>
-              <button
-                onClick={clearAll}
-                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/10"
-                title="Clear conversation"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+            <div className="text-xs text-gray-400">
+              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6 flex flex-col h-[calc(100vh-88px)]">
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto space-y-4 py-4">
-            {messages.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-cyan-400/20 to-blue-600/20 border border-cyan-400/30 flex items-center justify-center">
-                    <Volume2 className="w-8 h-8 text-cyan-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white/90 mb-2">Ready to assist</h3>
-                  <p className="text-white/60 max-w-md">
-                    Press the microphone button and try saying "Hello Jarvis", "What's the time?", or ask me anything!
-                  </p>
-                </div>
+      <main className="container mx-auto px-4 py-6 max-w-4xl">
+        {/* Status Panel */}
+        <div className="mb-6 p-5 bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/30 shadow-lg">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <div className="text-cyan-400 text-3xl font-light mb-1">
+                {new Date().getHours().toString().padStart(2, '0')}:{new Date().getMinutes().toString().padStart(2, '0')}
               </div>
-            ) : (
-              <>
-                {messages.map((message, index) => (
-                  <div key={index} className={`flex gap-3 ${message.role === 'you' ? 'justify-end' : 'justify-start'}`}>
-                    {message.role === 'jarvis' && (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold">J</span>
-                      </div>
-                    )}
-
-                    <div className={`max-w-[80%] ${message.role === 'you' ? 'order-1' : ''}`}>
-                      <div className={`rounded-2xl px-4 py-3 ${message.role === 'you'
-                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
-                          : 'bg-white/10 backdrop-blur border border-white/20 text-white'
-                        }`}>
-                        <p className="text-sm leading-relaxed">{message.text}</p>
-                        <p className={`text-xs mt-1 ${message.role === 'you' ? 'text-white/70' : 'text-white/50'
-                          }`}>
-                          {formatTime(message.timestamp)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {message.role === 'you' && (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold">You</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {isProcessing && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold">J</span>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        </div>
-                        <span className="text-sm text-white/70">Processing...</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </>
-            )}
-          </div>
-
-          {/* Voice Input Status */}
-          {(listening || interim) && (
-            <div className="mb-4 p-4 rounded-xl bg-white/10 backdrop-blur border border-white/20">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-white/90">Listening...</span>
-                </div>
-                {error && (
-                  <span className="text-xs text-red-400">Error: {error}</span>
-                )}
-              </div>
-              {interim && (
-                <p className="text-white/70 text-sm italic">"{interim}"</p>
-              )}
+              <div className="text-gray-400 text-xs uppercase tracking-wider">Current Time</div>
             </div>
-          )}
 
-          {/* Voice Control */}
-          <div className="flex items-center justify-center gap-4 py-4">
-            <button
-              onClick={listening ? stopListening : startListening}
-              className={`group relative p-4 rounded-full transition-all duration-300 ${listening
-                  ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/25'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg shadow-cyan-500/25'
-                }`}
-              disabled={isProcessing}
-            >
-              {listening ? (
-                <MicOff className="w-6 h-6 text-white" />
-              ) : (
-                <Mic className="w-6 h-6 text-white" />
-              )}
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <div className="text-cyan-400 text-3xl font-light mb-1">
+                {new Date().toLocaleDateString('en-US', { weekday: 'short' })}
+              </div>
+              <div className="text-gray-400 text-xs uppercase tracking-wider">{new Date().toLocaleDateString()}</div>
+            </div>
 
-              {listening && (
-                <div className="absolute inset-0 rounded-full border-2 border-red-300 animate-ping"></div>
-              )}
-            </button>
-
-            <div className="text-center">
-              <p className="text-sm text-white/60">
-                {listening ? 'Tap to stop listening' : 'Tap to start voice input'}
-              </p>
-              {!listening && transcript && (
-                <p className="text-xs text-white/40 mt-1">Last heard: "{transcript.slice(-30)}..."</p>
-              )}
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <div className="text-cyan-400 text-3xl font-light mb-1">
+                {supported ? 'Online' : 'Offline'}
+              </div>
+              <div className="text-gray-400 text-xs uppercase tracking-wider">System Status</div>
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Conversation Panel */}
+        <div className="mb-6 bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/30 shadow-lg overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-700/30 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-cyan-300">Conversation</h2>
+            <button
+              onClick={() => { setTranscript(''); setInterim(''); setMessages([]); }}
+              className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded transition-colors"
+            >
+              Clear History
+            </button>
+          </div>
+
+          <div className="h-80 overflow-y-auto p-5 bg-gradient-to-b from-gray-900/50 to-gray-900/20">
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                <div className="mb-4 w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                </div>
+                <p className="text-center">Say "Hello Jarvis" or ask about the time or date</p>
+                <p className="text-sm mt-2 text-gray-600">Click the microphone button to start</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((m, i) => {
+                  const isYou = m.role === 'you'
+                  return (
+                    <div key={i} className={`flex ${isYou ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] rounded-2xl p-4 ${isYou ? 'bg-blue-600/30 border border-blue-500/30' : 'bg-cyan-900/30 border border-cyan-700/30'}`}>
+                        <div className="flex items-center mb-1.5">
+                          <div className={`w-2 h-2 rounded-full mr-2 ${isYou ? 'bg-blue-400' : 'bg-cyan-400'}`}></div>
+                          <span className="text-xs font-medium text-gray-300">
+                            {isYou ? 'You' : 'JARVIS'}
+                          </span>
+                        </div>
+                        <div className="text-sm">{m.text}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Controls Panel */}
+        <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/30 shadow-lg p-5">
+          <h2 className="text-lg font-semibold text-cyan-300 mb-4">Voice Controls</h2>
+
+          {!supported ? (
+            <div className="p-4 bg-red-900/20 border border-red-700/30 rounded-lg text-center">
+              <p className="text-red-300">SpeechRecognition not supported in this browser.</p>
+              <p className="text-sm text-red-400/80 mt-1">Try using Chrome or Edge</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                {!listening ? (
+                  <button
+                    onClick={startListening}
+                    className="relative group flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-500/30"
+                  >
+                    <div className="absolute inset-0 rounded-full bg-cyan-400/20 group-hover:bg-cyan-400/30 animate-ping"></div>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopListening}
+                    className="relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-orange-600 hover:from-red-400 hover:to-orange-500 transition-all duration-300 shadow-lg hover:shadow-red-500/30"
+                  >
+                    <div className="absolute inset-0 rounded-full bg-red-400/20 animate-ping"></div>
+                    <div className="w-6 h-6 bg-white rounded-sm"></div>
+                  </button>
+                )}
+              </div>
+
+              <div className="text-center">
+                <p className="text-sm text-gray-400 mb-2">
+                  Status: {listening ?
+                    <span className="text-cyan-400">Listening... <span className="inline-flex"><span className="h-2 w-2 bg-cyan-400 rounded-full animate-pulse ml-1"></span><span className="h-2 w-2 bg-cyan-400 rounded-full animate-pulse ml-1 delay-150"></span><span className="h-2 w-2 bg-cyan-400 rounded-full animate-pulse ml-1 delay-300"></span></span></span> :
+                    <span className="text-gray-400">Ready</span>}
+                </p>
+                {error && (
+                  <p className="text-sm text-red-400 mt-1">Error: {error}</p>
+                )}
+              </div>
+
+              <div className="bg-gray-800/50 p-4 rounded-lg">
+                <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Live Transcription</div>
+                <div className="min-h-12 p-3 bg-gray-900/30 rounded border border-gray-700/50">
+                  {transcript || interim ? (
+                    <>
+                      {transcript && <span className="text-white">{transcript}</span>}
+                      {interim && <span className="text-gray-400"> {interim}</span>}
+                    </>
+                  ) : (
+                    <span className="text-gray-500">Speech will appear here...</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Command Suggestions */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-500 mb-2">Try saying:</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {['Hello Jarvis', 'What time is it?', "What's today's date?", 'How is the weather?'].map((cmd, i) => (
+              <span key={i} className="px-3 py-1.5 text-xs bg-gray-800/50 text-gray-300 rounded-full border border-gray-700/30">
+                "{cmd}"
+              </span>
+            ))}
+          </div>
+        </div>
+      </main>
+
+      <footer className="mt-10 py-5 text-center text-xs text-gray-600 border-t border-gray-800/30">
+        <p>JARVIS Voice Assistant • Built with React & Web Speech API</p>
+      </footer>
     </div>
   )
 }
