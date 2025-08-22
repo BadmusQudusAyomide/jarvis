@@ -9,3 +9,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Confetti animations for Birthday Mode */
+@keyframes confetti-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 1; }
+}
+
+@keyframes confetti-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

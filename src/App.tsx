@@ -1,5 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
 
+// Personality pack: motivational quotes and jokes
+const MOTIVATIONAL_QUOTES: string[] = [
+  "Believe you can and you're halfway there.",
+  "Small steps every day lead to big results.",
+  "Focus, commit, and execute.",
+  "Your future is created by what you do today, not tomorrow.",
+  "Discipline beats motivation. Start now.",
+  "Make it happen. Shock everyone.",
+  "Progress over perfection.",
+  "Dream big. Start small. Act now.",
+]
+
+const JOKES: string[] = [
+  "Why did the developer go broke? Because they used up all their cache.",
+  "I told my computer I needed a break, and it said: 'No problem, I'll go to sleep.'",
+  "Why do programmers prefer dark mode? Because light attracts bugs.",
+  "There are only 10 types of people in the world: those who understand binary and those who don't.",
+  "Debugging: being the detective in a crime movie where you are also the murderer.",
+  "I would tell you a UDP joke, but you might not get it.",
+]
+
+// Fun Easter eggs: key phrase -> witty response (string or generator)
+const EASTER_EGGS: Record<string, string | (() => string)> = {
+  'open the pod bay doors': "I'm sorry, Dave. I'm afraid I can't do that.",
+  'are you alive': "I live in the cloud, rent-free.",
+  'sing a song': 'La la la... Okay, I will spare your ears, Boss.',
+  'flip a coin': () => (Math.random() < 0.5 ? 'Heads!' : 'Tails!'),
+  'roll a dice': () => `You rolled a ${1 + Math.floor(Math.random() * 6)}!`,
+}
+
 function App() {
   const [supported, setSupported] = useState<boolean>(false)
   const [listening, setListening] = useState(false)
@@ -12,6 +42,10 @@ function App() {
   const [manualText, setManualText] = useState('')
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [isBirthday, setIsBirthday] = useState(false)
+  const [confetti, setConfetti] = useState<Array<{ left: number; delay: number; duration: number; color: string; size: number }>>([])
+  const [birthdayGreeting, setBirthdayGreeting] = useState<string | null>(null)
+  const birthdaySpokenRef = useRef(false)
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -87,16 +121,114 @@ function App() {
     }
   }, [])
 
-  const speak = (text: string) => {
+  // Play a quick celebratory chime
+  const playChime = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      o.type = 'sine'
+      o.frequency.value = 659.25 // E5
+      g.gain.setValueAtTime(0.0001, ctx.currentTime)
+      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02)
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6)
+      o.connect(g)
+      g.connect(ctx.destination)
+      o.start()
+      o.stop(ctx.currentTime + 0.65)
+    } catch {}
+  }
+
+  // Birthday Mode: previously auto on date; now disabled (we trigger on greeting)
+  useEffect(() => {
+    const now = new Date()
+    if (now.getMonth() === 7 && now.getDate() === 22 && false) {
+      setIsBirthday(true)
+      // Generate confetti pieces once
+      const colors = ['#f97316', '#22c55e', '#3b82f6', '#eab308', '#ef4444', '#a855f7', '#14b8a6']
+      const pieces = Array.from({ length: 80 }).map(() => ({
+        left: Math.random() * 100,
+        delay: Math.random() * 1.8,
+        duration: 3 + Math.random() * 3.5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: 6 + Math.floor(Math.random() * 8),
+      }))
+      setConfetti(pieces)
+
+      const greeting = "Happy Birthday, Boss! You're unstoppable today 🚀."
+      setBirthdayGreeting(greeting)
+      setIsTyping(true)
+      setTimeout(() => {
+        setMessages((m) => [...m, { role: 'jarvis', text: greeting }])
+        speak(greeting)
+        birthdaySpokenRef.current = true
+        setIsTyping(false)
+        playChime()
+      }, 400)
+
+      // Auto-stop confetti after a few seconds
+      const t = setTimeout(() => setIsBirthday(false), 9000)
+
+      // Fallback: if speech blocked, speak on first user interaction
+      const tryOnInteraction = () => {
+        if (!birthdaySpokenRef.current && birthdayGreeting) {
+          speak(birthdayGreeting)
+          birthdaySpokenRef.current = true
+        }
+        window.removeEventListener('pointerdown', tryOnInteraction)
+        window.removeEventListener('keydown', tryOnInteraction)
+      }
+      // Give a moment for auto-speak; then arm listeners
+      const arm = setTimeout(() => {
+        window.addEventListener('pointerdown', tryOnInteraction, { once: true })
+        window.addEventListener('keydown', tryOnInteraction, { once: true })
+      }, 800)
+
+      return () => clearTimeout(t)
+    }
+  }, [])
+
+  // Helper to show confetti and play chime on demand
+  const triggerBirthdayFX = () => {
+    setIsBirthday(true)
+    const colors = ['#f97316', '#22c55e', '#3b82f6', '#eab308', '#ef4444', '#a855f7', '#14b8a6']
+    const pieces = Array.from({ length: 80 }).map(() => ({
+      left: Math.random() * 100,
+      delay: Math.random() * 1.8,
+      duration: 3 + Math.random() * 3.5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 6 + Math.floor(Math.random() * 8),
+    }))
+    setConfetti(pieces)
+    playChime()
+    setTimeout(() => setIsBirthday(false), 9000)
+  }
+
+  // More robust speech: resume if paused and retry while voices load
+  const speak = (text: string, attempts = 0) => {
     const synth = window.speechSynthesis
     if (!synth) return
-    const utter = new SpeechSynthesisUtterance(text)
-    utter.voice = preferredVoiceRef.current || null
-    utter.rate = 1
-    utter.pitch = 1
-    utter.lang = (preferredVoiceRef.current?.lang as string) || navigator.language || 'en-US'
-    synth.cancel() // stop any previous utterances
-    synth.speak(utter)
+
+    try { synth.resume?.() } catch {}
+
+    const doSpeak = () => {
+      const utter = new SpeechSynthesisUtterance(text)
+      utter.voice = preferredVoiceRef.current || null
+      utter.rate = 1
+      utter.pitch = 1
+      utter.lang = (preferredVoiceRef.current?.lang as string) || navigator.language || 'en-US'
+      try { synth.cancel() } catch {}
+      synth.speak(utter)
+    }
+
+    // If voices not ready yet, retry shortly (max 5 attempts)
+    const voices = synth.getVoices?.() || []
+    if (voices.length === 0 && attempts < 5) {
+      setTimeout(() => speak(text, attempts + 1), 250)
+      return
+    }
+
+    doSpeak()
   }
 
   const handleUserUtterance = (text: string) => {
@@ -115,6 +247,36 @@ function App() {
 
   const generateReply = (text: string): string => {
     const lower = text.toLowerCase().trim()
+
+    // Personality: Motivation
+    if (/(^|\b)(motivate me|motivation|inspire me)(\b|[!,. ])/.test(lower)) {
+      const quote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]
+      return quote
+    }
+
+    // Personality: Jokes
+    if (/(^|\b)(tell me a joke|joke)(\b|[!,. ])/.test(lower)) {
+      const joke = JOKES[Math.floor(Math.random() * JOKES.length)]
+      return joke
+    }
+
+    // Introduce yourself
+    if (/(jarvis,?\s*)?(introduce yourself|who are you|what are you)/.test(lower)) {
+      return "I'm Jarvis, your voice assistant. I listen, respond, and help you get things done."
+    }
+
+    // Who is your boss
+    if (/(jarvis,?\s*)?(who is your boss|who's your boss|who is your owner)/.test(lower)) {
+      return 'You, Qudus. Always you.'
+    }
+
+    // Easter eggs (hidden)
+    for (const key of Object.keys(EASTER_EGGS)) {
+      if (lower.includes(key)) {
+        const val = EASTER_EGGS[key]
+        return typeof val === 'function' ? (val as () => string)() : val
+      }
+    }
 
     // Open links: "Open YouTube", "Open GitHub", etc.
     const openMatch = lower.match(/^open\s+(?:the\s+)?([\w\- ]+)$/)
@@ -157,6 +319,12 @@ function App() {
 
     // Greetings
     if (/(^|\b)(hello|hi|hey|yo)(\b|[!,. ])|good (morning|afternoon|evening)/.test(lower)) {
+      const now = new Date()
+      // If it's Aug 22, add birthday line and trigger FX
+      if (now.getMonth() === 7 && now.getDate() === 22) {
+        triggerBirthdayFX()
+        return "Hello Boss. Oh, I almost forgot—happy birthday, Boss! 🎂🚀"
+      }
       return 'Hello Boss.'
     }
 
@@ -197,6 +365,44 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
+      {/* Birthday confetti overlay */}
+      {isBirthday && (
+        <div className="fixed inset-0 overflow-hidden z-20">
+          {/* Manual replay button in case autoplay is blocked */}
+          {birthdayGreeting && (
+            <div className="pointer-events-auto absolute top-3 right-3">
+              <button
+                onClick={() => {
+                  speak(birthdayGreeting)
+                  birthdaySpokenRef.current = true
+                }}
+                className="px-3 py-1.5 text-xs rounded-md bg-pink-600 hover:bg-pink-500 text-white shadow"
+              >
+                Play Birthday Greeting
+              </button>
+            </div>
+          )}
+          <div className="pointer-events-none absolute inset-0">
+            {confetti.map((c, i) => (
+              <span
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: '-10vh',
+                  left: `${c.left}%`,
+                  width: c.size,
+                  height: c.size,
+                  backgroundColor: c.color,
+                  opacity: 0.95,
+                  transform: 'translateY(-10vh)',
+                  borderRadius: 2,
+                  animation: `confetti-fall ${c.duration}s linear ${c.delay}s forwards`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
       {/* Header with glass effect */}
       <header className="sticky top-0 z-10 bg-gray-800/80 backdrop-blur-md border-b border-gray-700/50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -403,7 +609,7 @@ function App() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500 mb-2">Try saying:</p>
           <div className="flex flex-wrap justify-center gap-2">
-            {['Hello Jarvis', 'What time is it?', "What's today's date?", 'How is the weather?'].map((cmd, i) => (
+            {['Hello Jarvis', 'What time is it?', "What's today's date?", 'Motivate me', 'Tell me a joke', 'Jarvis, introduce yourself', 'Jarvis, who is your boss?'].map((cmd, i) => (
               <span key={i} className="px-3 py-1.5 text-xs bg-gray-800/50 text-gray-300 rounded-full border border-gray-700/30">
                 "{cmd}"
               </span>
