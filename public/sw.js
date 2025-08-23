@@ -1,5 +1,5 @@
 /* Simple service worker for Vite + React PWA */
-const CACHE_NAME = 'jarvis-cache-v2';
+const CACHE_NAME = 'jarvis-cache-v3';
 const APP_SHELL = [
   '/',
   '/index.html',

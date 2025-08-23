@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { tryAutomationForTarget } from './services/automation'
 import { getWeatherResponse } from './services/weather'
+import { getWikiSummary } from './services/wiki'
+import { getCalcResult } from './services/calc'
+import { buildGoogleUrl, canFetchGoogleResults, fetchGoogleTopResults, formatBestGoogleInsight } from './services/search'
+import { buildYouTubeSearchUrl } from './services/youtube'
+import { canFetchNews, fetchTopHeadlines, formatHeadlineList, detectCountryCodes, fetchHeadlinesByCountries, formatHeadlinesByCountry } from './services/news'
+import { getDefinitionResponse } from './services/dictionary'
+import { detectTimeDateIntent, getTimeDateResponse } from './services/time'
+import { getCurrencyConversionResponse } from './services/currency'
 
 // Enhanced personality packs
 const MOTIVATIONAL_QUOTES = [
@@ -212,6 +220,18 @@ function App() {
     }
   }
 
+  // Avoid speaking out raw URLs; make TTS friendlier
+  const sanitizeForSpeech = (t: string) => {
+    return t
+      // Replace URL with a friendly phrase
+      .replace(/https?:\/\/\S+/gi, 'the link below')
+      .replace(/\bLink:\s*/gi, 'link: ')
+      // Replace decorative bullet emoji with a normal dash
+      .replace(/🔹/g, '- ')
+      // Strip most emoji/pictographs so TTS doesn't read them
+      .replace(/[\u{1F000}-\u{1FAFF}\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE0F}]/gu, '')
+  }
+
   const BIRTHDAY_MESSAGE = "🎉 HAPPY BIRTHDAY, BOSS! 🎉 Today is YOUR day! You're absolutely incredible and I'm honored to assist someone as amazing as you. Here's to another year of greatness! 🎂✨"
   const [birthdaySpoken, setBirthdaySpoken] = useState(false)
 
@@ -249,7 +269,10 @@ function App() {
     try { synth.resume() } catch { }
 
     const doSpeak = () => {
-      const utter = new SpeechSynthesisUtterance(text)
+      // If the message includes a non-spoken section, only read the part before it
+      const beforeNoSpeak = text.split('[no-speak]')[0]?.trim() || text
+      const speakable = sanitizeForSpeech(beforeNoSpeak || 'I have posted the details below.')
+      const utter = new SpeechSynthesisUtterance(speakable)
       utter.voice = preferredVoiceRef.current || null
       utter.rate = voiceSettings.rate
       utter.pitch = voiceSettings.pitch
@@ -289,6 +312,63 @@ function App() {
 
   const generateReply = async (text: string): Promise<string> => {
     const lower = text.toLowerCase().trim()
+
+    // Calculator mode: detect mathy input or explicit calculate commands
+    if (/^(calc|calculate|compute|evaluate)\b/i.test(text) || /[\d)(][\d\s+\-*/^x%().]+$/i.test(text)) {
+      try {
+        return getCalcResult(text)
+      } catch {
+        return 'I could not evaluate that expression. Try something like: calculate 12.5% of 240, or (2+3)*4.'
+      }
+    }
+
+    // YouTube Search & Open
+    const ytMatch = (
+      text.match(/^play\s+(.+?)\s+(?:on\s+)?youtube\s*$/i) ||
+      text.match(/^(?:open\s+)?youtube\s+(?:and\s+)?(?:search\s+for\s+|search\s+)?(.+)$/i) ||
+      text.match(/^youtube\s+(.+)$/i) ||
+      text.match(/^(?:play|search)\s+(.+)\s+on\s+youtube\s*$/i)
+    )
+    if (ytMatch) {
+      const q = ytMatch[1].trim().replace(/[.?!]$/, '')
+      const url = buildYouTubeSearchUrl(q)
+      try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* ignore */ }
+      return `Searching YouTube for "${q}".`
+    }
+
+    // Time & Date
+    {
+      const intent = detectTimeDateIntent(text)
+      if (intent) return getTimeDateResponse(intent)
+    }
+
+    // Currency Conversion
+    {
+      const conv = await getCurrencyConversionResponse(text)
+      if (conv) return conv
+    }
+
+    // Dictionary / Definitions
+    if (/^(what\s+does\s+.+\s+mean\??|define\s+.+|(?:the\s+)?definition\s+of\s+.+|(?:the\s+)?meaning\s+of\s+.+)$/i.test(text.trim())) {
+      return await getDefinitionResponse(text)
+    }
+
+    // News: list headlines (country-aware, no external open)
+    if (/(\bnews\b|headline|headlines|breaking)/i.test(lower)) {
+      try {
+        if (canFetchNews()) {
+          const codes = detectCountryCodes(lower)
+          if (codes.length) {
+            const groups = await fetchHeadlinesByCountries(codes, 3)
+            const grouped = formatHeadlinesByCountry(groups, 3)
+            if (grouped) return grouped
+          }
+          const articles = await fetchTopHeadlines(5)
+          if (articles.length) return formatHeadlineList(articles, 5)
+        }
+      } catch { /* ignore and fall back */ }
+      return "I couldn't fetch headlines right now."
+    }
 
     // Birthday triggers
     if (/(happy birthday|birthday|celebrate)/.test(lower) && !birthdayTriggered) {
@@ -334,6 +414,37 @@ function App() {
     if (/(productive|productivity|focus|work better|efficient)/.test(lower)) {
       const tip = PRODUCTIVITY_TIPS[Math.floor(Math.random() * PRODUCTIVITY_TIPS.length)]
       return `Pro tip: ${tip} You've got this! 🚀`
+    }
+
+    // Google Search (return a single best insight)
+    const searchMatch = text.match(/^(?:search\s+(?:google\s+)?for|google\s+search\s+for|google\s+)(.+)$/i)
+    if (searchMatch) {
+      const q = searchMatch[1].trim().replace(/[.?!]$/, '')
+      try {
+        if (canFetchGoogleResults()) {
+          const results = await fetchGoogleTopResults(q, 5)
+          if (results.length) {
+            const reply = formatBestGoogleInsight(q, results)
+            const link = results[0]?.link
+            if (link) {
+              setTimeout(() => {
+                try { window.open(link, '_blank', 'noopener,noreferrer') } catch { /* ignore */ }
+              }, 5000)
+            }
+            return reply
+          }
+        }
+      } catch { /* ignore and fall back to opening */ }
+      try {
+        window.open(buildGoogleUrl(q), '_blank', 'noopener,noreferrer')
+      } catch { /* ignore */ }
+      return `Opening Google for "${q}" in your browser.`
+    }
+
+    // Wikipedia lookup (who/what/wikipedia/tell me about)
+    if (/(^|\b)(wikipedia|who\s+(is|was)|what\s+is|tell\s+me\s+about)(\b|\s)/i.test(lower)) {
+      const summary = await getWikiSummary(text)
+      return summary
     }
 
     // Enhanced jokes
