@@ -757,11 +757,11 @@ function App() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-6xl">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-3xl">
         {/* Main Interface */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {/* Conversation Panel */}
-          <div className="lg:col-span-2">
+          <div>
             <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl overflow-hidden`}>
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 flex items-center justify-between">
                 <h2 className={`text-base sm:text-lg font-semibold text-${currentTheme.accent}`}>Conversation</h2>
@@ -778,7 +778,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="h-[60vh] sm:h-[70vh] lg:h-96 overflow-y-auto p-4 sm:p-6 pb-28 bg-gradient-to-b from-black/20 to-transparent">
+              <div className="h-[60vh] sm:h-[70vh] lg:h-[70vh] overflow-y-auto p-4 sm:p-6 pb-28 bg-gradient-to-b from-black/20 to-transparent">
                 {messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-gray-500">
                     <div className={`mb-6 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br ${currentTheme.primary} flex items-center justify-center relative`}>
@@ -794,7 +794,10 @@ function App() {
                       const isYou = m.role === 'you'
                       const isBirthday = m.special === 'birthday'
                       return (
-                        <div key={i} className={`flex ${isYou ? 'justify-end' : 'justify-start'}`}>
+                        <div key={i} className={`flex items-end gap-3 ${isYou ? 'justify-end' : 'justify-start'}`}>
+                          {!isYou && (
+                            <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${currentTheme.primary} flex items-center justify-center text-xs font-bold`}>J</div>
+                          )}
                           <div className={`max-w-[85%] rounded-2xl p-4 ${
                             isBirthday 
                               ? 'bg-gradient-to-r from-pink-500/30 to-purple-500/30 border-2 border-pink-400/50' 
@@ -817,6 +820,9 @@ function App() {
                               {m.text}
                             </div>
                           </div>
+                          {isYou && (
+                            <div className="w-8 h-8 rounded-full bg-blue-600/50 border border-blue-500/40 flex items-center justify-center text-xs font-bold">Y</div>
+                          )}
                         </div>
                       )
                     })}
@@ -842,8 +848,8 @@ function App() {
             </div>
           </div>
 
-          {/* Control Panel */}
-          <div className="space-y-6">
+          {/* Control Panel (hidden for ChatGPT-like simplified UI) */}
+          <div className="space-y-6 hidden">
             {/* Voice Controls */}
             <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl p-6`}>
               <h3 className={`text-lg font-semibold text-${currentTheme.accent} mb-4`}>Voice Control</h3>
@@ -910,7 +916,7 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Manual Input */}
+                  {/* Manual Input (hidden, replaced by global bottom composer) */}
                   {!listening && (
                     <form
                       onSubmit={(e) => {
@@ -920,7 +926,7 @@ function App() {
                           setManualText('')
                         }
                       }}
-                      className="space-y-2"
+                      className="space-y-2 hidden"
                     >
                       <input
                         type="text"
@@ -943,7 +949,7 @@ function App() {
             </div>
 
             {/* Voice Settings */}
-            <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl p-6`}>
+            <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl p-6 hidden`}>
               <h3 className={`text-lg font-semibold text-${currentTheme.accent} mb-4`}>Voice Settings</h3>
               <div className="space-y-4">
                 <div>
@@ -995,7 +1001,7 @@ function App() {
             </div>
 
             {/* Quick Commands */}
-            <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl p-6`}>
+            <div className={`${currentTheme.card} backdrop-blur-xl rounded-2xl border ${currentTheme.glow} shadow-2xl p-6 hidden`}>
               <h3 className={`text-lg font-semibold text-${currentTheme.accent} mb-4`}>Quick Commands</h3>
               <div className="space-y-2">
                 {[
