@@ -86,6 +86,10 @@ function App() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [voiceSettings, setVoiceSettings] = useState({ rate: 1, pitch: 1, volume: 1 })
   const [theme] = useState<'cyber' | 'minimal' | 'matrix'>('matrix') // default matrix
+  // TTS/ASR coordination
+  const [speaking, setSpeaking] = useState(false)
+  const wantAutoResumeRef = useRef(false)
+  const lastFinalAtRef = useRef<number>(0)
 
   // Birthday system
   const [isBirthday, setIsBirthday] = useState(false)
@@ -116,7 +120,8 @@ function App() {
       setSupported(true)
       const recog = new SR()
       recog.lang = navigator.language || 'en-US'
-      recog.continuous = true
+      // Use single-utterance mode to avoid merged phrases
+      recog.continuous = false
       recog.interimResults = true
       recog.maxAlternatives = 1
 
@@ -136,10 +141,20 @@ function App() {
           }
         }
         if (finalText) {
+          // Debounce multiple finals fired by some engines
+          const now = Date.now()
+          if (now - lastFinalAtRef.current < 600) return
+          lastFinalAtRef.current = now
           const clean = finalText.trim()
           setTranscript(prev => (prev + ' ' + clean).trim())
           setInterim('')
-          if (clean) handleUserUtterance(clean)
+          if (clean) {
+            // Stop recognition to avoid overlapping pickups and queue auto-resume
+            try { recognitionRef.current?.stop() } catch { }
+            wantAutoResumeRef.current = true
+            setListening(false)
+            handleUserUtterance(clean)
+          }
         } else {
           setInterim(interimText)
         }
@@ -278,6 +293,23 @@ function App() {
       utter.pitch = voiceSettings.pitch
       utter.volume = voiceSettings.volume
       utter.lang = (preferredVoiceRef.current?.lang as string) || navigator.language || 'en-US'
+
+      // Pause recognition while speaking to prevent self-hearing
+      try { recognitionRef.current?.stop() } catch { }
+      setListening(false)
+      setSpeaking(true)
+
+      utter.onstart = () => {
+        setSpeaking(true)
+      }
+      utter.onend = () => {
+        setSpeaking(false)
+        // Auto-resume listening if it was requested after last final
+        if (wantAutoResumeRef.current) {
+          wantAutoResumeRef.current = false
+          setTimeout(() => startListening(), 200)
+        }
+      }
 
       try { synth.cancel() } catch { }
       synth.speak(utter)
@@ -575,6 +607,11 @@ function App() {
     setError(null)
     setInterim('')
     try {
+      // If currently speaking, wait until TTS ends
+      if (speaking) {
+        wantAutoResumeRef.current = true
+        return
+      }
       recognitionRef.current?.start()
       setListening(true)
     } catch {
@@ -741,7 +778,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="h-[60vh] sm:h-[70vh] lg:h-96 overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-black/20 to-transparent">
+              <div className="h-[60vh] sm:h-[70vh] lg:h-96 overflow-y-auto p-4 sm:p-6 pb-28 bg-gradient-to-b from-black/20 to-transparent">
                 {messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-gray-500">
                     <div className={`mb-6 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br ${currentTheme.primary} flex items-center justify-center relative`}>
@@ -993,6 +1030,48 @@ function App() {
             </button>
           </div>
         )}
+      </div>
+
+  {/* Mobile sticky composer */}
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-black/70 backdrop-blur-md border-t border-white/10 px-3 pt-2 pb-[calc(env(safe-area-inset-bottom,0)+12px)]">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const value = manualText.trim()
+            if (!value) return
+            handleUserUtterance(value)
+            setManualText('')
+          }}
+          className="flex items-center gap-2"
+        >
+          <button
+            type="button"
+            onClick={() => (listening ? stopListening() : startListening())}
+            className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${listening ? 'bg-red-600' : 'bg-gradient-to-br'} ${!listening ? currentTheme.primary : ''} shadow-lg`}
+            aria-label={listening ? 'Stop listening' : 'Start listening'}
+          >
+            {listening ? (
+              <div className="w-3 h-3 bg-white rounded-sm" />
+            ) : (
+              <span className="text-white text-xl">🎤</span>
+            )}
+          </button>
+          <input
+            type="text"
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            placeholder={listening ? 'Listening…' : 'Type your message'}
+            className="flex-1 rounded-xl bg-black/50 border border-white/20 px-4 py-3 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/40"
+            disabled={speaking}
+          />
+          <button
+            type="submit"
+            disabled={!manualText.trim()}
+            className={`shrink-0 px-4 py-3 rounded-xl bg-gradient-to-r ${currentTheme.primary} text-sm font-semibold disabled:opacity-50`}
+          >
+            Send
+          </button>
+        </form>
       </div>
 
   {/* Footer */ }
