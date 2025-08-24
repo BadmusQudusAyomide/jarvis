@@ -9,6 +9,7 @@ import { canFetchNews, fetchTopHeadlines, formatHeadlineList, detectCountryCodes
 import { getDefinitionResponse } from './services/dictionary'
 import { detectTimeDateIntent, getTimeDateResponse } from './services/time'
 import { getCurrencyConversionResponse } from './services/currency'
+import { SUPABASE_ENABLED, saveMessage, loadRecentMessages } from './services/persistence'
 
 // Enhanced personality packs
 const MOTIVATIONAL_QUOTES = [
@@ -98,6 +99,19 @@ function App() {
   const [showBirthdayModal, setShowBirthdayModal] = useState(false)
 
   // Enhanced features
+
+  // Load recent messages from Supabase (if configured)
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      if (!SUPABASE_ENABLED) return
+      const recent = await loadRecentMessages(50)
+      if (!mounted || !recent.length) return
+      const mapped = recent.map(r => ({ role: r.role, text: r.text } as Message))
+      setMessages(mapped)
+    })()
+    return () => { mounted = false }
+  }, [])
   const [isMinimized, setIsMinimized] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [sessionStats, setSessionStats] = useState({ commands: 0, startTime: Date.now() })
@@ -272,6 +286,7 @@ function App() {
 
     setTimeout(() => {
       setMessages(m => [...m, { role: 'jarvis', text: BIRTHDAY_MESSAGE, special: 'birthday' }])
+      if (SUPABASE_ENABLED) saveMessage('jarvis', BIRTHDAY_MESSAGE)
     }, 1000)
 
     setTimeout(() => setIsBirthday(false), 15000)
@@ -329,6 +344,7 @@ function App() {
     if (!trimmed) return
 
     setMessages(m => [...m, { role: 'you', text: trimmed }])
+    if (SUPABASE_ENABLED) saveMessage('you', trimmed)
     setSessionStats(prev => ({ ...prev, commands: prev.commands + 1 }))
     setIsTyping(true)
     playSound('chime')
@@ -336,6 +352,7 @@ function App() {
     setTimeout(async () => {
       const reply = await generateReply(trimmed)
       setMessages(m => [...m, { role: 'jarvis', text: reply }])
+      if (SUPABASE_ENABLED) saveMessage('jarvis', reply)
       speak(reply)
       setIsTyping(false)
       if (isMinimized) setUnreadCount(prev => prev + 1)
