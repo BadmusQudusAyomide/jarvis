@@ -363,9 +363,25 @@ function App() {
     )
     if (ytMatch) {
       const q = ytMatch[1].trim().replace(/[.?!]$/, '')
-      const url = buildYouTubeSearchUrl(q)
-      try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* ignore */ }
-      return `Searching YouTube for "${q}".`
+      try {
+        if (canFetchGoogleResults()) {
+          const results = await fetchGoogleTopResults(q, 5)
+          if (results.length) {
+            const reply = formatBestGoogleInsight(q, results)
+            const link = results[0]?.link
+            if (link) {
+              setTimeout(() => {
+                try { window.open(link, '_blank', 'noopener,noreferrer') } catch { /* ignore */ }
+              }, 5000)
+            }
+            return reply
+          }
+        }
+      } catch { /* ignore and fall back to opening */ }
+      try {
+        window.open(buildGoogleUrl(q), '_blank', 'noopener,noreferrer')
+      } catch { /* ignore */ }
+      return `Opening Google for "${q}" in your browser.`
     }
 
     // Time & Date
@@ -405,30 +421,10 @@ function App() {
     // Birthday triggers
     if (/(happy birthday|birthday|celebrate)/.test(lower) && !birthdayTriggered) {
       const now = new Date()
-      if (now.getMonth() === 7 && now.getDate() === 22) {
-        triggerBirthdayMode()
-        return "Thank you for the birthday wishes! Let me celebrate properly! 🎉"
-      }
-      return "Thank you! Though it's not my birthday today, I appreciate the sentiment! 😊"
-    }
-
-    // Enhanced greetings with personality
-    if (/(^|\b)(hello|hi|hey|yo|good morning|good afternoon|good evening)(\b|[!,. ])/i.test(lower)) {
-      const hour = new Date().getHours()
-      let greeting = "Hello"
-
-      if (/(good morning|morning)/i.test(lower) || (hour >= 5 && hour < 12)) {
-        greeting = "Good morning"
-      } else if (/(good afternoon|afternoon)/i.test(lower) || (hour >= 12 && hour < 17)) {
-        greeting = "Good afternoon"
-      } else if (/(good evening|evening)/i.test(lower) || (hour >= 17 && hour < 22)) {
-        greeting = "Good evening"
-      } else if (hour >= 22 || hour < 5) {
-        greeting = "Working late tonight, I see. Hello"
-      }
-
-      const now = new Date()
-      if (now.getMonth() === 7 && now.getDate() === 22 && !birthdayTriggered) {
+      const hour = now.getHours()
+      const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+      
+      if (now.getMonth() === 7 && now.getDate() === 25) {
         triggerBirthdayMode()
         return `${greeting}, Boss! Wait... isn't today special? Happy Birthday! 🎂🎉`
       }
@@ -501,8 +497,50 @@ function App() {
       return "I'm JARVIS - your advanced AI voice assistant. I'm here to help you stay productive, motivated, and entertained. Think of me as your digital companion! 🤖"
     }
 
-    if (/(who is your boss|who's your boss|who do you serve)/.test(lower)) {
-      return "You are, Qudus! You're the boss, the chief, the commander-in-chief! I'm at your service. 👑"
+    // Self-identity and creator information
+    if (/(who is your (boss|owner|creator)|who (made|created|built) you|who are you|are you jarvis)/i.test(lower)) {
+      return `I am Jarvis, your AI assistant created by Badmus Qudus Ayomide. ` +
+        `I'm here to help with tasks, answer questions, and make your life easier. ` +
+        `You can think of me as your personal digital assistant.`
+    }
+
+    // About the creator
+    if (/(who is (badmus|qudus|badmus qudus|badmus qudus ayomide))/i.test(lower)) {
+      return `Badmus Qudus Ayomide is my creator and owner. ` +
+        `He's a talented developer who built me to assist with daily tasks and automation. ` +
+        `You can call him Qudus for short.`
+    }
+
+
+    if (/(what can you do|what are your (skills|capabilities|features)|help)/i.test(lower)) {
+      return `I can help you with many things, including:\n` +
+        `• Answering questions and providing information\n` +
+        `• Performing calculations and conversions\n` +
+        `• Opening applications and websites\n` +
+        `• Searching the web and summarizing results\n` +
+        `• Telling jokes and providing motivation\n` +
+        `• And much more! Just ask me what you'd like to do.`
+    }
+
+    if (/(how (are you built|do you work|were you made)|what are you made of)/i.test(lower)) {
+      return `I'm built using modern web technologies:\n` +
+        `• Frontend: React with TypeScript\n` +
+        `• Voice: Web Speech API for speech recognition and synthesis\n` +
+        `• Backend: Python Flask server for automation\n` +
+        `• Styling: TailwindCSS for responsive design\n` +
+        `I run directly in your web browser for privacy and convenience.`
+    }
+
+    // Greeting with name
+    if (/(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|yo|what's up)/i.test(lower)) {
+      const greetings = [
+        `Hello Qudus! How can I assist you today?`,
+        `Hi there Qudus! What can I do for you?`,
+        `Hey Qudus! How can I help?`,
+        `Greetings Qudus! What would you like to know?`,
+        `Good day Qudus! How may I be of service?`
+      ]
+      return greetings[Math.floor(Math.random() * greetings.length)]
     }
 
     // System info
