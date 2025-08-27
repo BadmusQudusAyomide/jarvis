@@ -10,8 +10,11 @@ import { getDefinitionResponse } from './services/dictionary'
 import { detectTimeDateIntent, getTimeDateResponse } from './services/time'
 import { getCurrencyConversionResponse } from './services/currency'
 import { SUPABASE_ENABLED, saveMessage, loadRecentMessages } from './services/persistence'
+import { upsertEmbedding } from './services/embeddings'
+import { buildSemanticContext, semanticRecall } from './services/recall'
+import { responseGenerator } from './services/responseGenerator'
 
-// Enhanced personality packs
+
 const MOTIVATIONAL_QUOTES = [
   "The future belongs to those who believe in the beauty of their dreams.",
   "Success is not final, failure is not fatal: it is the courage to continue that counts.",
@@ -153,6 +156,7 @@ function App() {
             interimText = alt.transcript
             break
           }
+ 
         }
         if (finalText) {
           // Debounce multiple finals fired by some engines
@@ -286,7 +290,10 @@ function App() {
 
     setTimeout(() => {
       setMessages(m => [...m, { role: 'jarvis', text: BIRTHDAY_MESSAGE, special: 'birthday' }])
-      if (SUPABASE_ENABLED) saveMessage('jarvis', BIRTHDAY_MESSAGE)
+      if (SUPABASE_ENABLED) {
+        saveMessage('jarvis', BIRTHDAY_MESSAGE)
+        // Do not embed assistant/birthday messages to avoid recursive context
+      }
     }, 1000)
 
     setTimeout(() => setIsBirthday(false), 15000)
@@ -339,21 +346,138 @@ function App() {
     doSpeak()
   }
 
+  // Use recall only when the user explicitly asks about remembered facts
+  const isMemoryQuery = (text: string) => {
+    const t = text.trim().toLowerCase()
+    if (!t) return false
+    const patterns = [
+      /remember|recall|memory|what did i say|what do you know/i,
+      /where do i live|what's my favorite|what is my favorite|who am i|what is my name/i,
+      /my birthday|when is my birthday/i,
+    ]
+    return patterns.some(p => p.test(t))
+  }
+
+  // Convert first-person statements from memory to second-person answers
+  const toSecondPerson = (text: string) => {
+    let t = (text || '').trim()
+    if (!t) return ''
+    // Basic pronoun swaps
+    t = t.replace(/\bI am\b/gi, 'You are')
+    t = t.replace(/\bI'm\b/gi, 'You are')
+    t = t.replace(/\bI\b/gi, 'You')
+    t = t.replace(/\bmy\b/gi, 'your')
+    t = t.replace(/\bmine\b/gi, 'yours')
+    // Capitalize first letter
+    return t.charAt(0).toUpperCase() + t.slice(1)
+  }
+
+  // Build a concise answer from cleaned recall matches for specific intents
+  const buildConciseMemoryAnswer = (question: string, cleaned: Array<{ t: string }>): string | null => {
+    const q = question.toLowerCase()
+    const find = (re: RegExp) => cleaned.find(m => re.test(m.t))?.t || null
+
+    // Where do I live?
+    if (/where do i live/.test(q)) {
+      const m = find(/\bI\s+live\s+in\s+(.+)/i)
+      if (m) {
+        const city = m.replace(/.*\bI\s+live\s+in\s+/i, '').replace(/\.$/, '')
+        return `You live in ${city}.`
+      }
+      // Fallback: if top token looks like a place (short phrase/has comma), use it
+      const loc = cleaned.find(x => x.t.length <= 40 && /[a-z]/i.test(x.t))?.t
+      if (loc) {
+        const city = loc.replace(/\.$/, '')
+        return `You live in ${city}.`
+      }
+    }
+
+    // What's my favorite color?
+    if (/what('?| i)s\s+my\s+favorite\s+color/.test(q)) {
+      const m = find(/\bmy\s+favorite\s+color\s+is\s+(.+)/i)
+      if (m) {
+        const color = m.replace(/.*\bmy\s+favorite\s+color\s+is\s+/i, '').replace(/\.$/, '')
+        return `Your favorite color is ${color}.`
+      }
+      // Fallback: single-word token as color
+      const token = cleaned.find(x => x.t.split(/\s+/).length === 1 && x.t.length <= 20)?.t
+      if (token) return `Your favorite color is ${token.replace(/\.$/, '')}.`
+    }
+
+    // What is my name / Who am I?
+    if (/(what\s+is\s+my\s+name|who\s+am\s+i)/.test(q)) {
+      const m = find(/\bmy\s+name\s+is\s+(.+)/i)
+      if (m) {
+        const name = m.replace(/.*\bmy\s+name\s+is\s+/i, '').replace(/\.$/, '')
+        return `Your name is ${name}.`
+      }
+    }
+
+    return null
+  }
+
   const handleUserUtterance = (text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
 
     setMessages(m => [...m, { role: 'you', text: trimmed }])
-    if (SUPABASE_ENABLED) saveMessage('you', trimmed)
+    if (SUPABASE_ENABLED) {
+      saveMessage('you', trimmed)
+      upsertEmbedding(trimmed, 'message')
+    }
     setSessionStats(prev => ({ ...prev, commands: prev.commands + 1 }))
     setIsTyping(true)
+    
+    // Add typing indicator message
+    setMessages(m => [...m, { role: 'jarvis', text: '...' }])
     playSound('chime')
 
     setTimeout(async () => {
-      const reply = await generateReply(trimmed)
-      setMessages(m => [...m, { role: 'jarvis', text: reply }])
-      if (SUPABASE_ENABLED) saveMessage('jarvis', reply)
-      speak(reply)
+      // Only fetch relevant memories if the user asked for remembered facts
+      const useRecall = isMemoryQuery(trimmed)
+      if (useRecall) {
+        const matches = await semanticRecall(trimmed, 8)
+        if (matches && matches.length > 0) {
+          const qLower = trimmed.toLowerCase()
+          const trivial = new Set(['hi','hello','hey','good morning','good afternoon','good evening'])
+          const isQuestion = (t: string) => /^(\s*)(what|where|who|when|why|how)\b/i.test(t) || /\?\s*$/.test(t)
+          const cleaned = matches
+            .map(m => ({ ...m, t: (m.text || '').trim() }))
+            .filter(m => m.t.length >= 5)
+            .filter(m => !trivial.has(m.t.toLowerCase()))
+            .filter(m => m.t.toLowerCase() !== qLower)
+            .filter(m => !m.t.toLowerCase().startsWith('relevant memory:'))
+            .filter(m => !isQuestion(m.t))
+
+          // Prefer intent-specific concise formatting
+          const formatted = buildConciseMemoryAnswer(trimmed, cleaned)
+          const top = cleaned[0]
+          if (formatted || top) {
+            const concise = formatted || toSecondPerson(top.t)
+            const finalReply = /[.!?]$/.test(concise) ? concise : `${concise}.`
+            // Replace typing indicator with actual response
+            setMessages(m => [...m.slice(0, -1), { role: 'jarvis', text: finalReply }])
+            if (SUPABASE_ENABLED) {
+              saveMessage('jarvis', finalReply)
+            }
+            speak(finalReply)
+            setIsTyping(false)
+            if (isMinimized) setUnreadCount(prev => prev + 1)
+            return
+          }
+        }
+      }
+
+      // Fallback to normal reply (no memory context shown)
+      const reply = await responseGenerator.generateResponse(trimmed)
+      const finalReply = reply
+      // Replace typing indicator with actual response
+      setMessages(m => [...m.slice(0, -1), { role: 'jarvis', text: finalReply }])
+      if (SUPABASE_ENABLED) {
+        saveMessage('jarvis', finalReply)
+        // Do not embed assistant replies to avoid storing context text
+      }
+      speak(finalReply)
       setIsTyping(false)
       if (isMinimized) setUnreadCount(prev => prev + 1)
     }, 500)
@@ -872,7 +996,11 @@ function App() {
                               </span>
                             </div>
                             <div className={`text-sm leading-relaxed ${isBirthday ? 'font-semibold' : ''}`}>
-                              {m.text}
+                              {m.text === '...' ? (
+                                <span className="typing-indicator">JARVIS is thinking</span>
+                              ) : (
+                                m.text
+                              )}
                             </div>
                           </div>
                           {isYou && (

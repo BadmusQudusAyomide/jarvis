@@ -8,7 +8,18 @@ let supabase: SupabaseClient | null = null
 
 if (url && anonKey) {
   supabase = createClient(url, anonKey, {
-    auth: { persistSession: false },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      // Provide a no-op storage to avoid IndexedDB/ServiceWorker issues in private mode
+      storage: {
+        getItem: async () => null,
+        setItem: async () => {},
+        removeItem: async () => {},
+      } as any,
+    },
+    // Realtime config remains default; we are not subscribing anywhere yet
   })
 }
 

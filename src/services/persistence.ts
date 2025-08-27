@@ -14,12 +14,20 @@ const DEFAULT_USER_ID = 'qudus' // replace with real auth later
 
 export async function saveMessage(role: 'you' | 'jarvis', text: string, userId: string = DEFAULT_USER_ID) {
   const supabase = getSupabase()
-  if (!supabase) return
+  if (!supabase) {
+    console.log('💾 Supabase not available - message not saved')
+    return
+  }
   try {
+    console.log('💾 Saving message to Supabase:', { role, text: text.substring(0, 50) + '...' })
     const { error } = await supabase.from('messages').insert({ user_id: userId, role, text })
-    if (error) console.warn('Supabase saveMessage error', error)
+    if (error) {
+      console.error('💾 Supabase saveMessage error:', error)
+    } else {
+      console.log('💾 Message saved successfully')
+    }
   } catch (e) {
-    console.warn('Supabase saveMessage exception', e)
+    console.error('💾 Supabase saveMessage exception:', e)
   }
 }
 
