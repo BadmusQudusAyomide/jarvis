@@ -195,60 +195,32 @@ bot.on('polling_error', (error) => {
   console.error('Polling error:', error)
 })
 
-// Start the bot
-async function startBot() {
+// Set webhook endpoint  
+app.get('/api/set-webhook', async (req, res) => {
   try {
-    console.log('🚀 Starting JARVIS Telegram Bot...')
-    
-    // Express server for webhook (works for both dev and production)
-    const app = express()
-    app.use(express.json())
-
-    app.post('/webhook', (req, res) => {
-      console.log('📨 Webhook received:', req.body)
-      bot.processUpdate(req.body)
-      res.sendStatus(200)
-    })
-
-    app.get('/', (req, res) => {
-      res.json({ 
-        status: 'JARVIS Telegram Bot is running',
-        mode: process.env.VERCEL ? 'webhook' : 'polling',
-        timestamp: new Date().toISOString(),
-        bot: '@BadmusQudusbot'
-      })
-    })
-
-    app.get('/api/set-webhook', async (req, res) => {
-      try {
-        const webhookUrl = `https://${req.headers.host}/webhook`
-        await bot.setWebHook(webhookUrl)
-        res.json({ success: true, webhookUrl })
-      } catch (error) {
-        res.status(500).json({ error: error.message })
-      }
-    })
-
-    // Check if running on Vercel or other serverless platform
-    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-      console.log('🌐 Running in serverless mode (Vercel)...')
-    } else {
-      // For development, use polling mode
-      console.log('✅ JARVIS Bot is running in polling mode')
-      console.log('🤖 Bot available at: t.me/BadmusQudusbot')
-      console.log('📱 Test the bot now - it should respond to messages!')
-      
-      app.listen(port, () => {
-        console.log(`🌐 Server running on port ${port}`)
-      })
-    }
-
-    // Export for Vercel
-    export default app
+    const webhookUrl = `https://${req.headers.host}/webhook`
+    await bot.setWebHook(webhookUrl)
+    res.json({ success: true, webhookUrl })
   } catch (error) {
-    console.error('❌ Failed to start bot:', error)
-    process.exit(1)
+    res.status(500).json({ error: error.message })
   }
+})
+
+// Check if running on Vercel or other serverless platform
+if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+  console.log('🌐 Running in serverless mode (Vercel)...')
+} else {
+  // For development, use polling mode
+  console.log('✅ JARVIS Bot is running in polling mode')
+  console.log('🤖 Bot available at: t.me/BadmusQudusbot')
+  console.log('📱 Test the bot now - it should respond to messages!')
+  
+  // Start polling for local development
+  bot.startPolling()
+  
+  app.listen(port, () => {
+    console.log(`🌐 Server running on port ${port}`)
+  })
 }
 
 // Handle all text messages (not just commands)
@@ -276,5 +248,5 @@ process.on('SIGINT', async () => {
   }
 })
 
-// Start the bot
-startBot()
+// Export for Vercel
+export default app
