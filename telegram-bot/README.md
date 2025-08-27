@@ -31,7 +31,7 @@ A Telegram bot integration for your JARVIS AI assistant, bringing intelligent co
 
 3. **Add Your API Keys to .env:**
    ```
-   TELEGRAM_BOT_TOKEN=8286176569:AAGAiImoyPGUCTfCcSLJbkXVQl2cT23wLyI
+   TELEGRAM_BOT_TOKEN=
    VITE_GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
