@@ -29,8 +29,8 @@
 Add these in Render dashboard:
 
 ```
-VITE_GEMINI_API_KEY=AIzaSyD1plfZ66DQMvCTOQHp17wnPS26TjY7K5s
-VITE_SUPABASE_URL=https://rbddbtufarlubwgovygk.supabase.co
+VITE_GEMINI_API_KEY=ak ah=gain
+VITE_SUPABASE_URL=ask again
 VITE_SUPABASE_ANON_KEY=your_complete_supabase_key
 ```
 
