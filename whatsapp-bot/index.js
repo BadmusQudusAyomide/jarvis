@@ -209,9 +209,22 @@ async function loadSession() {
     }
 
     logger.info('✅ Loaded session from Supabase');
-    return typeof data.session_data === 'string' 
-      ? JSON.parse(data.session_data)
-      : data.session_data;
+    
+    let sessionData;
+    if (typeof data.session_data === 'string') {
+      sessionData = JSON.parse(data.session_data, (key, value) => {
+        // Handle Buffer deserialization
+        if (value && typeof value === 'string' && 
+            (key === 'private' || key === 'public')) {
+          return Buffer.from(value, 'base64');
+        }
+        return value;
+      });
+    } else {
+      sessionData = data.session_data;
+    }
+
+    return sessionData;
   } catch (error) {
     logger.error('❌ Error loading session from Supabase:', error);
     return null;
@@ -222,11 +235,26 @@ async function saveSession(sessionData) {
   if (!supabase) return false;
 
   try {
+    // Ensure we're only saving the raw data, not the entire object
+    const serializedData = {
+      creds: sessionData.creds,
+      keys: {
+        get: (type, ids) => sessionData.keys.get(type, ids),
+        set: sessionData.keys.set.bind(sessionData.keys)
+      }
+    };
+
     const { error } = await supabase
       .from('whatsapp_sessions')
       .upsert({
         id: SESSION_ID,
-        session_data: sessionData,
+        session_data: JSON.stringify(serializedData, (key, value) => {
+          // Handle special serialization for Buffers
+          if (value && value.type === 'Buffer' && Array.isArray(value.data)) {
+            return Buffer.from(value.data).toString('base64');
+          }
+          return value;
+        }),
         updated_at: new Date().toISOString(),
       });
 
