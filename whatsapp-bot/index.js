@@ -31,7 +31,6 @@ const crushProfiles = {
       "Well... he told me you're absolutely adorable! 🌸 He says you have the most beautiful smile, and you're incredibly kind and intelligent. He thinks you're amazing in every way! 💕",
     moreDetails:
       "He also mentioned how you make him laugh, and how you have this special way of brightening up any room you walk into. You're truly someone special! ✨",
-    // Extra special responses for Owoyemi
     extraResponse1:
       'He told me you have this amazing way of making him feel like the luckiest person alive just by being you. 🌟',
     extraResponse2:
@@ -42,7 +41,6 @@ const crushProfiles = {
       "He told me you're the first thing he thinks about when he wakes up and the last thing on his mind before he sleeps. You're his dream come true! 💕",
     extraResponse5:
       "He says you're the missing piece he never knew he needed. You complete him in ways he never imagined possible. ✨",
-    // Special questions she might ask
     whoIsHe:
       "Well... he's someone very special to me. Someone who talks about you with stars in his eyes and butterflies in his stomach. Someone who's completely, utterly, hopelessly in love with you. 💫",
     whatDidHeSay:
@@ -60,7 +58,6 @@ const crushProfiles = {
       "He told me you're the most intelligent person he's ever met! 🧠 Your creativity and passion for life inspire him every day. You're absolutely perfect! 🌟",
     moreDetails:
       "He says you have this incredible energy that lights up his world, and your kindness touches everyone around you. You're his dream girl! 💖",
-    // Extra special responses for Islamiyat
     extraResponse1:
       "He told me you're the kind of person who makes him believe in destiny. That some people are just meant to find each other! ✨",
     extraResponse2:
@@ -71,7 +68,6 @@ const crushProfiles = {
       "He told me you're the reason he believes in love at first sight. You're everything he never knew he was looking for! 💕",
     extraResponse5:
       "He says you're not just beautiful, you're extraordinary. You're the kind of person who changes lives just by being you! 🌸",
-    // Special questions she might ask
     whoIsHe:
       "Well... he's someone who's completely enchanted by you. Someone who talks about you with such passion and admiration. Someone who's absolutely, completely, totally in love with you! 💫",
     whatDidHeSay:
@@ -89,7 +85,6 @@ const crushProfiles = {
       "He told me you're the most beautiful soul he's ever encountered! 🌸 Your strength and determination amaze him, and your smile brightens his darkest days. You're absolutely perfect! ✨",
     moreDetails:
       "He says you have this magical way of making everything better, and your intelligence and wit keep him on his toes. You're his everything! 💫",
-    // Extra special responses for Islamiya
     extraResponse1:
       "He told me you're the kind of person who makes him believe in miracles. That love like this only happens once in a lifetime! ✨",
     extraResponse2:
@@ -100,7 +95,6 @@ const crushProfiles = {
       "He told me you're the light in his darkness, the hope in his despair. You're his salvation! 🌟",
     extraResponse5:
       "He says you're not just his love, you're his destiny. You're the person he was meant to spend his life with! 💫",
-    // Special questions she might ask
     whoIsHe:
       "Well... he's someone who's completely and utterly devoted to you. Someone who sees you as his soulmate, his best friend, and his true love all in one. Someone who's absolutely, hopelessly in love with you! 💫",
     whatDidHeSay:
@@ -576,6 +570,7 @@ async function startWhatsAppBot() {
         }
 
         // Special question handling for Owoyemi - but don't block normal AI
+        const crushInfo = userNameTracking.get(userId)
         if (crushInfo && crushInfo.providedName) {
           const matchedCrush = crushNames.find(
             name => name.toLowerCase() === crushInfo.providedName.toLowerCase()
@@ -801,3 +796,4 @@ process.on('SIGTERM', () => {
 
 // Start the bot
 startWhatsAppBot()
+done
