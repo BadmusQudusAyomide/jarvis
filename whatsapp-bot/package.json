@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
+    "build": "echo 'No build required for Node.js app'",
     "clear-auth": "node clear-auth.js"
   },
   "dependencies": {
