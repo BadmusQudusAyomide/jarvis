@@ -353,7 +353,7 @@ async function startWhatsAppBot() {
               }, 24000)
             }
 
-            return // Don't process further
+            // Don't return here - let it continue to normal AI processing
           } else {
             // Fun response for other names
             const randomResponse =
@@ -385,10 +385,10 @@ async function startWhatsAppBot() {
           const randomGreeting =
             humanGreetings[Math.floor(Math.random() * humanGreetings.length)]
           await sock.sendMessage(remoteJid, { text: randomGreeting })
-          return
+          return // Return here since we're asking for name
         }
 
-        // Handle follow-up questions about "he"
+        // Handle follow-up questions about "he" - but don't block normal AI
         if (
           messageText.toLowerCase().includes('who') ||
           messageText.toLowerCase().includes('what') ||
@@ -434,12 +434,12 @@ async function startWhatsAppBot() {
                 }, 12000)
               }
 
-              return
+              // Don't return here - let it continue to normal AI processing
             }
           }
         }
 
-        // Special question handling for Owoyemi
+        // Special question handling for Owoyemi - but don't block normal AI
         if (crushInfo && crushInfo.providedName) {
           const matchedCrush = crushNames.find(
             name => name.toLowerCase() === crushInfo.providedName.toLowerCase()
@@ -455,7 +455,7 @@ async function startWhatsAppBot() {
             ) {
               const profile = crushProfiles[matchedCrush]
               await sock.sendMessage(remoteJid, { text: profile.whoIsHe })
-              return
+              return // Return here since this is a specific crush question
             }
 
             if (
@@ -464,7 +464,7 @@ async function startWhatsAppBot() {
             ) {
               const profile = crushProfiles[matchedCrush]
               await sock.sendMessage(remoteJid, { text: profile.whatDidHeSay })
-              return
+              return // Return here since this is a specific crush question
             }
 
             if (
@@ -473,7 +473,7 @@ async function startWhatsAppBot() {
             ) {
               const profile = crushProfiles[matchedCrush]
               await sock.sendMessage(remoteJid, { text: profile.isHeCute })
-              return
+              return // Return here since this is a specific crush question
             }
 
             if (
@@ -483,12 +483,12 @@ async function startWhatsAppBot() {
             ) {
               const profile = crushProfiles[matchedCrush]
               await sock.sendMessage(remoteJid, { text: profile.doesHeLikeMe })
-              return
+              return // Return here since this is a specific crush question
             }
           }
         }
 
-        // Generate response using JARVIS
+        // Generate response using JARVIS (this will always run unless specifically blocked)
         const response = await responseGenerator.generateResponse(
           messageText,
           userId

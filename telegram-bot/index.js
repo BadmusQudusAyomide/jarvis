@@ -202,14 +202,14 @@ async function handleMessage(message) {
           // Add a funny comment
           setTimeout(async () => {
             const funnyComment =
-              "Btw, I'm not supposed to gossip, but he's totally into you! 😏��"
+              "Btw, I'm not supposed to gossip, but he's totally into you! 😏🤫"
             await bot.sendMessage(chatId, funnyComment, {
               parse_mode: 'Markdown',
             })
           }, 2000)
         }, 2000)
 
-        return // Don't process further
+        // Don't return here - let it continue to normal AI processing
       } else {
         // Fun response for other names
         const randomResponse =
@@ -236,10 +236,10 @@ async function handleMessage(message) {
       const randomGreeting =
         humanGreetings[Math.floor(Math.random() * humanGreetings.length)]
       await bot.sendMessage(chatId, randomGreeting, { parse_mode: 'Markdown' })
-      return
+      return // Return here since we're asking for name
     }
 
-    // Handle follow-up questions about "he"
+    // Handle follow-up questions about "he" - but don't block normal AI
     if (
       text.toLowerCase().includes('who') ||
       text.toLowerCase().includes('what') ||
@@ -275,7 +275,60 @@ async function handleMessage(message) {
             }, 2000)
           }, 3000)
 
-          return
+          // Don't return here - let it continue to normal AI processing
+        }
+      }
+    }
+
+    // Special question handling for Owoyemi - but don't block normal AI
+    if (crushInfo && crushInfo.providedName) {
+      const matchedCrush = crushNames.find(
+        name => name.toLowerCase() === crushInfo.providedName.toLowerCase()
+      )
+
+      if (matchedCrush === 'Owoyemi') {
+        const lowerText = text.toLowerCase()
+
+        // Handle specific questions she might ask
+        if (lowerText.includes('who is he') || lowerText.includes("who's he")) {
+          const profile = crushProfiles[matchedCrush]
+          await bot.sendMessage(chatId, profile.whoIsHe, {
+            parse_mode: 'Markdown',
+          })
+          return // Return here since this is a specific crush question
+        }
+
+        if (
+          lowerText.includes('what did he say') ||
+          lowerText.includes('what did he tell you')
+        ) {
+          const profile = crushProfiles[matchedCrush]
+          await bot.sendMessage(chatId, profile.whatDidHeSay, {
+            parse_mode: 'Markdown',
+          })
+          return // Return here since this is a specific crush question
+        }
+
+        if (
+          lowerText.includes('is he cute') ||
+          lowerText.includes('is he handsome')
+        ) {
+          const profile = crushProfiles[matchedCrush]
+          await bot.sendMessage(chatId, profile.isHeCute, {
+            parse_mode: 'Markdown',
+          })
+          return // Return here since this is a specific crush question
+        }
+
+        if (
+          lowerText.includes('does he like me') ||
+          lowerText.includes('does he have feelings')
+        ) {
+          const profile = crushProfiles[matchedCrush]
+          await bot.sendMessage(chatId, profile.doesHeLikeMe, {
+            parse_mode: 'Markdown',
+          })
+          return // Return here since this is a specific crush question
         }
       }
     }
@@ -290,7 +343,7 @@ async function handleMessage(message) {
 
     const userResponseGenerator = userSessions.get(userId)
 
-    // Generate response
+    // Generate response using JARVIS (this will always run unless specifically blocked)
     const response = await userResponseGenerator.generateResponse(text, userId)
 
     // Send response
