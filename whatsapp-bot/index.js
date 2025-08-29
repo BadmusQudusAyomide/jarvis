@@ -796,4 +796,3 @@ process.on('SIGTERM', () => {
 
 // Start the bot
 startWhatsAppBot()
-done
