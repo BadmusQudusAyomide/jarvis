@@ -5,21 +5,42 @@ import { ResponseGenerator } from './services/responseGenerator.js'
 
 dotenv.config()
 
-
-
-
+// Validate required environment variables
 const token = process.env.TELEGRAM_BOT_TOKEN
 const webhookUrl = process.env.WEBHOOK_URL
 const port = process.env.PORT || 3000
 
+// Check if we're running on Vercel
+const isVercel = process.env.VERCEL === '1'
+
 if (!token) {
   console.error('❌ TELEGRAM_BOT_TOKEN is required')
-  process.exit(1)
+  if (isVercel) {
+    console.error(
+      '❌ Please set TELEGRAM_BOT_TOKEN in Vercel environment variables'
+    )
+  }
+  // Don't exit on Vercel, just log the error
+  if (!isVercel) {
+    process.exit(1)
+  }
 }
 
-// Initialize bot
-const bot = new TelegramBot(token)
-const responseGenerator = new ResponseGenerator()
+// Initialize bot only if token is available
+let bot
+let responseGenerator
+
+try {
+  if (token) {
+    bot = new TelegramBot(token)
+    responseGenerator = new ResponseGenerator()
+    console.log('✅ Telegram bot initialized successfully')
+  } else {
+    console.warn('⚠️ Bot not initialized - missing token')
+  }
+} catch (error) {
+  console.error('❌ Failed to initialize bot:', error)
+}
 
 // Store user sessions
 const userSessions = new Map()
@@ -30,67 +51,84 @@ app.use(express.json())
 
 // Health check endpoint
 app.get('/', (req, res) => {
-  res.json({ 
-    status: 'JARVIS Telegram Bot is running!',
-    bot: '@BadmusQudusbot',
-    timestamp: new Date().toISOString()
-  })
+  try {
+    res.json({
+      status: 'JARVIS Telegram Bot is running!',
+      bot: '@BadmusQudusbot',
+      timestamp: new Date().toISOString(),
+      environment: isVercel ? 'Vercel' : 'Local',
+      botStatus: bot ? 'Initialized' : 'Not Initialized (Missing Token)',
+    })
+  } catch (error) {
+    console.error('Health check error:', error)
+    res.status(500).json({ error: 'Health check failed' })
+  }
 })
 
 // Webhook endpoint
 app.post('/webhook', async (req, res) => {
   try {
+    if (!bot) {
+      console.warn('⚠️ Webhook received but bot not initialized')
+      return res.status(503).json({ error: 'Bot not initialized' })
+    }
+
     const update = req.body
-    
+
     if (update.message) {
       await handleMessage(update.message)
     }
-    
+
     res.sendStatus(200)
   } catch (error) {
     console.error('Webhook error:', error)
-    res.sendStatus(500)
+    res.status(500).json({ error: 'Webhook processing failed' })
   }
 })
 
 // Handle incoming messages
 async function handleMessage(message) {
+  if (!bot || !responseGenerator) {
+    console.error('❌ Bot or response generator not available')
+    return
+  }
+
   const chatId = message.chat.id
   const userId = message.from.id
   const text = message.text
   const userName = message.from.first_name || 'User'
-  
+
   console.log(`📱 Message from ${userName} (${userId}): ${text}`)
-  
+
   try {
     // Send typing indicator
     await bot.sendChatAction(chatId, 'typing')
-    
+
     // Get or create user session
     if (!userSessions.has(userId)) {
       userSessions.set(userId, new ResponseGenerator())
     }
-    
+
     const userResponseGenerator = userSessions.get(userId)
-    
+
     // Generate response
     const response = await userResponseGenerator.generateResponse(text, userId)
-    
+
     // Send response
     await bot.sendMessage(chatId, response, {
       parse_mode: 'Markdown',
-      reply_to_message_id: message.message_id
+      reply_to_message_id: message.message_id,
     })
-    
+
     console.log(`✅ Response sent to ${userName}`)
-    
   } catch (error) {
     console.error('Message handling error:', error)
-    
+
     // Send error message to user
     try {
-      await bot.sendMessage(chatId, 
-        "I'm sorry, I encountered an error processing your message. Please try again.", 
+      await bot.sendMessage(
+        chatId,
+        "I'm sorry, I encountered an error processing your message. Please try again.",
         { reply_to_message_id: message.message_id }
       )
     } catch (sendError) {
@@ -100,10 +138,10 @@ async function handleMessage(message) {
 }
 
 // Handle bot commands
-bot.onText(/\/start/, async (msg) => {
+bot.onText(/\/start/, async msg => {
   const chatId = msg.chat.id
   const userName = msg.from.first_name || 'User'
-  
+
   const welcomeMessage = `
 🤖 *Welcome to JARVIS, ${userName}!*
 
@@ -131,9 +169,9 @@ Just send me a message and I'll do my best to help!
   }
 })
 
-bot.onText(/\/help/, async (msg) => {
+bot.onText(/\/help/, async msg => {
   const chatId = msg.chat.id
-  
+
   const helpMessage = `
 🆘 *JARVIS Help*
 
@@ -164,9 +202,9 @@ Need more help? Just ask me anything!
   }
 })
 
-bot.onText(/\/status/, async (msg) => {
+bot.onText(/\/status/, async msg => {
   const chatId = msg.chat.id
-  
+
   const statusMessage = `
 📊 *JARVIS Status*
 
@@ -187,15 +225,15 @@ bot.onText(/\/status/, async (msg) => {
 })
 
 // Error handling
-bot.on('error', (error) => {
+bot.on('error', error => {
   console.error('Bot error:', error)
 })
 
-bot.on('polling_error', (error) => {
+bot.on('polling_error', error => {
   console.error('Polling error:', error)
 })
 
-// Set webhook endpoint  
+// Set webhook endpoint
 app.get('/api/set-webhook', async (req, res) => {
   try {
     const webhookUrl = `https://${req.headers.host}/webhook`
@@ -214,22 +252,22 @@ if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
   console.log('✅ JARVIS Bot is running in polling mode')
   console.log('🤖 Bot available at: t.me/BadmusQudusbot')
   console.log('📱 Test the bot now - it should respond to messages!')
-  
+
   // Start polling for local development
   bot.startPolling()
-  
+
   app.listen(port, () => {
     console.log(`🌐 Server running on port ${port}`)
   })
 }
 
 // Handle all text messages (not just commands)
-bot.on('message', async (msg) => {
+bot.on('message', async msg => {
   // Skip if it's a command (already handled by onText handlers)
   if (msg.text && msg.text.startsWith('/')) {
     return
   }
-  
+
   // Handle regular text messages
   if (msg.text) {
     await handleMessage(msg)
