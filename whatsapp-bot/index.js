@@ -18,6 +18,10 @@ dotenv.config()
 
 // Supabase client is already imported from services/supabase.js
 
+
+
+
+
 // Initialize response generator
 const responseGenerator = new ResponseGenerator()
 
