@@ -61,7 +61,7 @@ const crushProfiles = {
     moreDetails:
       "He says you have this incredible energy that lights up his world, and your kindness touches everyone around you. You're his dream girl! 💖",
   },
-  Emma: {
+  Islamiya: {
     response:
       "Oh my! 😊 *He* has been raving about you! You're everything he said and more.",
     followUp: "He's head over heels for you... 💕",
