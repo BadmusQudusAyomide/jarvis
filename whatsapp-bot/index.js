@@ -203,40 +203,38 @@ async function loadSession() {
       .eq('id', SESSION_ID)
       .single();
 
-    if (error || !data) {
-      logger.warn('No session found in Supabase');
+    if (error || !data || !data.session_data) {
+      logger.warn('No valid session found in Supabase');
       return null;
     }
 
     logger.info('✅ Loaded session from Supabase');
     
-    let sessionData;
-    if (typeof data.session_data === 'string') {
-      sessionData = JSON.parse(data.session_data, (key, value) => {
-        // Handle Buffer deserialization
-        if (value && typeof value === 'string' && 
-            (key === 'private' || key === 'public')) {
-          return Buffer.from(value, 'base64');
-        }
-        return value;
-      });
-    } else {
-      sessionData = data.session_data;
+    // If we have a session but it's empty or invalid, return null to trigger QR code
+    if (!data.session_data.creds || !data.session_data.keys) {
+      logger.warn('Invalid session data structure in Supabase');
+      await clearSession();
+      return null;
     }
 
-    return sessionData;
+    return data.session_data;
   } catch (error) {
     logger.error('❌ Error loading session from Supabase:', error);
+    await clearSession(); // Clear any potentially corrupted session
     return null;
   }
 }
 
 async function saveSession(sessionData) {
   if (!supabase) return false;
+  if (!sessionData || !sessionData.creds || !sessionData.keys) {
+    logger.warn('Invalid session data provided for saving');
+    return false;
+  }
 
   try {
-    // Ensure we're only saving the raw data, not the entire object
-    const serializedData = {
+    // Only save the minimal required data
+    const sessionToSave = {
       creds: sessionData.creds,
       keys: {
         get: (type, ids) => sessionData.keys.get(type, ids),
@@ -248,13 +246,7 @@ async function saveSession(sessionData) {
       .from('whatsapp_sessions')
       .upsert({
         id: SESSION_ID,
-        session_data: JSON.stringify(serializedData, (key, value) => {
-          // Handle special serialization for Buffers
-          if (value && value.type === 'Buffer' && Array.isArray(value.data)) {
-            return Buffer.from(value.data).toString('base64');
-          }
-          return value;
-        }),
+        session_data: sessionToSave, // Let Supabase handle JSON serialization
         updated_at: new Date().toISOString(),
       });
 
@@ -263,6 +255,7 @@ async function saveSession(sessionData) {
     return true;
   } catch (error) {
     logger.error('❌ Failed to save session to Supabase:', error);
+    await clearSession(); // Clear potentially corrupted session
     return false;
   }
 }
