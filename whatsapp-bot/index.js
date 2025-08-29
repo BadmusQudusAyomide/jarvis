@@ -197,6 +197,13 @@ async function loadSession() {
   }
 
   try {
+    // First, clear any existing session to force QR code generation
+    await clearSession();
+    logger.info('🔄 Forcing new session with QR code');
+    return null;
+    
+    // The following code is kept for future reference but is currently disabled
+    /*
     const { data, error } = await supabase
       .from('whatsapp_sessions')
       .select('session_data')
@@ -209,15 +216,8 @@ async function loadSession() {
     }
 
     logger.info('✅ Loaded session from Supabase');
-    
-    // If we have a session but it's empty or invalid, return null to trigger QR code
-    if (!data.session_data.creds || !data.session_data.keys) {
-      logger.warn('Invalid session data structure in Supabase');
-      await clearSession();
-      return null;
-    }
-
     return data.session_data;
+    */
   } catch (error) {
     logger.error('❌ Error loading session from Supabase:', error);
     await clearSession(); // Clear any potentially corrupted session
@@ -227,26 +227,29 @@ async function loadSession() {
 
 async function saveSession(sessionData) {
   if (!supabase) return false;
+  
+  // For now, don't save the session to avoid persistence issues
+  logger.info('🔄 Session saving disabled - using QR code on each start');
+  return false;
+  
+  /* Future implementation - keep for reference
   if (!sessionData || !sessionData.creds || !sessionData.keys) {
     logger.warn('Invalid session data provided for saving');
     return false;
   }
 
   try {
-    // Only save the minimal required data
-    const sessionToSave = {
-      creds: sessionData.creds,
-      keys: {
-        get: (type, ids) => sessionData.keys.get(type, ids),
-        set: sessionData.keys.set.bind(sessionData.keys)
-      }
-    };
-
     const { error } = await supabase
       .from('whatsapp_sessions')
       .upsert({
         id: SESSION_ID,
-        session_data: sessionToSave, // Let Supabase handle JSON serialization
+        session_data: {
+          creds: sessionData.creds,
+          keys: {
+            get: (type, ids) => sessionData.keys.get(type, ids),
+            set: sessionData.keys.set.bind(sessionData.keys)
+          }
+        },
         updated_at: new Date().toISOString(),
       });
 
@@ -255,9 +258,10 @@ async function saveSession(sessionData) {
     return true;
   } catch (error) {
     logger.error('❌ Failed to save session to Supabase:', error);
-    await clearSession(); // Clear potentially corrupted session
+    await clearSession();
     return false;
   }
+  */
 }
 
 async function clearSession() {
