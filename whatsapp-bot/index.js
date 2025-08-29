@@ -17,8 +17,10 @@ dotenv.config()
 // Initialize response generator
 const responseGenerator = new ResponseGenerator()
 
-// Store user sessions
+// Store user sessions and name tracking
 const userSessions = new Map()
+const userNameTracking = new Map() // Track if we've asked for name
+const crushName = 'Owoyemi' // Replace with actual name
 
 // Global variable to track reconnection attempts
 let reconnectAttempts = 0
@@ -53,11 +55,14 @@ import { createServer } from 'http'
 const server = createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({ 
-      status: 'healthy', 
-      timestamp: new Date().toISOString(),
-      botStatus: reconnectAttempts < MAX_RECONNECT_ATTEMPTS ? 'running' : 'error'
-    }))
+    res.end(
+      JSON.stringify({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        botStatus:
+          reconnectAttempts < MAX_RECONNECT_ATTEMPTS ? 'running' : 'error',
+      })
+    )
   } else {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     res.end('JARVIS WhatsApp Bot is running!')
@@ -206,14 +211,85 @@ async function startWhatsAppBot() {
 
       const remoteJid = message.key.remoteJid
       const senderName = message.pushName || 'Unknown'
+      const userId = `whatsapp_${remoteJid.replace('@s.whatsapp.net', '')}`
 
       console.log(
         `📱 Message from ${senderName} (${remoteJid}): ${messageText}`
       )
 
       try {
+        // Check if this is a name response
+        if (
+          userNameTracking.has(userId) &&
+          userNameTracking.get(userId).waitingForName
+        ) {
+          const providedName = messageText.trim()
+          userNameTracking.set(userId, { waitingForName: false, providedName })
+
+          // Check if name matches crush
+          if (providedName.toLowerCase() === crushName.toLowerCase()) {
+            const mysteriousResponse = `Ohh! 😊 *He* has told me a lot about you! You're exactly how he described you to be.`
+            await sock.sendMessage(remoteJid, { text: mysteriousResponse })
+
+            // Wait a moment then send follow-up
+            setTimeout(async () => {
+              const followUp = `He says you're really special... 🌟`
+              await sock.sendMessage(remoteJid, { text: followUp })
+            }, 2000)
+
+            return // Don't process further
+          } else {
+            // Normal response for other names
+            await sock.sendMessage(remoteJid, {
+              text: `Nice to meet you, ${providedName}! 😊`,
+            })
+          }
+        }
+
+        // Check if this is a greeting that should trigger name asking
+        const isGreeting =
+          /^(hi|hello|hey|good morning|good afternoon|good evening)$/i.test(
+            messageText.toLowerCase()
+          )
+
+        if (isGreeting && !userNameTracking.has(userId)) {
+          // First time greeting - ask for name
+          userNameTracking.set(userId, {
+            waitingForName: true,
+            providedName: null,
+          })
+
+          const greetingResponse = `Hello! 😊 I'm JARVIS, an AI assistant. What's your name?`
+          await sock.sendMessage(remoteJid, { text: greetingResponse })
+          return
+        }
+
+        // Handle follow-up questions about "he"
+        if (
+          messageText.toLowerCase().includes('who') ||
+          messageText.toLowerCase().includes('what') ||
+          messageText.toLowerCase().includes('he')
+        ) {
+          const crushInfo = userNameTracking.get(userId)
+          if (
+            crushInfo &&
+            crushInfo.providedName &&
+            crushInfo.providedName.toLowerCase() === crushName.toLowerCase()
+          ) {
+            const sweetResponse = `Well... he told me you're absolutely adorable! 🌸 He says you have the most beautiful smile, and you're incredibly kind and intelligent. He thinks you're amazing in every way! 💕`
+            await sock.sendMessage(remoteJid, { text: sweetResponse })
+
+            // Add more sweet details
+            setTimeout(async () => {
+              const moreDetails = `He also mentioned how you make him laugh, and how you have this special way of brightening up any room you walk into. You're truly someone special! ✨`
+              await sock.sendMessage(remoteJid, { text: moreDetails })
+            }, 3000)
+
+            return
+          }
+        }
+
         // Generate response using JARVIS
-        const userId = `whatsapp_${remoteJid.replace('@s.whatsapp.net', '')}`
         const response = await responseGenerator.generateResponse(
           messageText,
           userId

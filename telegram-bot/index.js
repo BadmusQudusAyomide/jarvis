@@ -42,8 +42,10 @@ try {
   console.error('❌ Failed to initialize bot:', error)
 }
 
-// Store user sessions
+// Store user sessions and name tracking
 const userSessions = new Map()
+const userNameTracking = new Map() // Track if we've asked for name
+const crushName = 'Owoyemi' // Replace with actual name
 
 // Express app for webhook
 const app = express()
@@ -101,6 +103,76 @@ async function handleMessage(message) {
   console.log(`📱 Message from ${userName} (${userId}): ${text}`)
 
   try {
+    // Check if this is a name response
+    if (
+      userNameTracking.has(userId) &&
+      userNameTracking.get(userId).waitingForName
+    ) {
+      const providedName = text.trim()
+      userNameTracking.set(userId, { waitingForName: false, providedName })
+
+      // Check if name matches crush
+      if (providedName.toLowerCase() === crushName.toLowerCase()) {
+        const mysteriousResponse = `Ohh! 😊 *He* has told me a lot about you! You're exactly how he described you to be.`
+        await bot.sendMessage(chatId, mysteriousResponse, {
+          parse_mode: 'Markdown',
+        })
+
+        // Wait a moment then send follow-up
+        setTimeout(async () => {
+          const followUp = `He says you're really special... 🌟`
+          await bot.sendMessage(chatId, followUp, { parse_mode: 'Markdown' })
+        }, 2000)
+
+        return // Don't process further
+      } else {
+        // Normal response for other names
+        await bot.sendMessage(chatId, `Nice to meet you, ${providedName}! 😊`)
+      }
+    }
+
+    // Check if this is a greeting that should trigger name asking
+    const isGreeting =
+      /^(hi|hello|hey|good morning|good afternoon|good evening)$/i.test(
+        text.toLowerCase()
+      )
+
+    if (isGreeting && !userNameTracking.has(userId)) {
+      // First time greeting - ask for name
+      userNameTracking.set(userId, { waitingForName: true, providedName: null })
+
+      const greetingResponse = `Hello! 😊 I'm JARVIS, an AI assistant. What's your name?`
+      await bot.sendMessage(chatId, greetingResponse, {
+        parse_mode: 'Markdown',
+      })
+      return
+    }
+
+    // Handle follow-up questions about "he"
+    if (
+      text.toLowerCase().includes('who') ||
+      text.toLowerCase().includes('what') ||
+      text.toLowerCase().includes('he')
+    ) {
+      const crushInfo = userNameTracking.get(userId)
+      if (
+        crushInfo &&
+        crushInfo.providedName &&
+        crushInfo.providedName.toLowerCase() === crushName.toLowerCase()
+      ) {
+        const sweetResponse = `Well... he told me you're absolutely adorable! 🌸 He says you have the most beautiful smile, and you're incredibly kind and intelligent. He thinks you're amazing in every way! 💕`
+        await bot.sendMessage(chatId, sweetResponse, { parse_mode: 'Markdown' })
+
+        // Add more sweet details
+        setTimeout(async () => {
+          const moreDetails = `He also mentioned how you make him laugh, and how you have this special way of brightening up any room you walk into. You're truly someone special! ✨`
+          await bot.sendMessage(chatId, moreDetails, { parse_mode: 'Markdown' })
+        }, 3000)
+
+        return
+      }
+    }
+
     // Send typing indicator
     await bot.sendChatAction(chatId, 'typing')
 
