@@ -16,11 +16,7 @@ import { createClient } from '@supabase/supabase-js';
 
 dotenv.config()
 
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const supabaseSecret = process.env.SUPABASE_SECRET;
-const supabase = createClient(supabaseUrl, supabaseKey, supabaseSecret);
+// Supabase client is already imported from services/supabase.js
 
 // Initialize response generator
 const responseGenerator = new ResponseGenerator()
