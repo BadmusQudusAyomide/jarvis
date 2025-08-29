@@ -4,17 +4,33 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
+// Use environment variables with fallback to VITE_ prefixed ones for compatibility
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 
+// Create a singleton Supabase client
 let supabase = null
 
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey)
-  console.log('✅ Supabase connected for WhatsApp bot')
-} else {
-  console.log('❌ Supabase not configured - missing URL or key')
+const initializeSupabase = () => {
+  if (!supabase && supabaseUrl && supabaseKey) {
+    try {
+      supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: {
+          persistSession: false, // We'll handle session persistence manually
+        },
+      })
+      console.log('✅ Supabase connected for WhatsApp bot')
+    } catch (error) {
+      console.error('❌ Failed to initialize Supabase:', error.message)
+    }
+  } else if (!supabase) {
+    console.error('❌ Supabase not configured - missing URL or key')
+  }
+  return supabase
 }
+
+// Initialize immediately
+initializeSupabase()
 
 // Save message to Supabase (same as web app)
 export async function saveMessage(role, text, userId = 'whatsapp_user') {

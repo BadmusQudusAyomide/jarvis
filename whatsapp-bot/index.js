@@ -11,6 +11,7 @@ import qrcode from 'qrcode-terminal'
 import dotenv from 'dotenv'
 import pino from 'pino'
 import { ResponseGenerator } from './services/responseGenerator.js'
+import { supabase } from './services/supabase.js'
 
 dotenv.config()
 
@@ -200,22 +201,96 @@ async function startWhatsAppBot() {
       `Using WhatsApp Web v${version.join('.')}, is latest: ${isLatest}`
     )
 
-    // Use multi-file auth state for session persistence
-    const { state, saveCreds } =
-      await useMultiFileAuthState('auth_info_baileys')
+    // Enhanced session management with Supabase fallback
+    let sessionManager;
+    
+    try {
+      // Try to load from Supabase first if available
+      if (supabase) {
+        logger.info('🔍 Checking for existing session in Supabase...');
+        const { data, error } = await supabase
+          .from('whatsapp_sessions')
+          .select('session_data')
+          .eq('id', 'default')
+          .single();
+
+        if (!error && data?.session_data) {
+          logger.info('✅ Loaded session from Supabase');
+          const sessionData = typeof data.session_data === 'string' 
+            ? JSON.parse(data.session_data) 
+            : data.session_data;
+          
+          sessionManager = {
+            state: sessionData,
+            saveCreds: async () => {
+              if (!supabase) return;
+              try {
+                await supabase
+                  .from('whatsapp_sessions')
+                  .upsert({
+                    id: 'default',
+                    session_data: sessionData,
+                    updated_at: new Date().toISOString(),
+                  });
+                logger.debug('💾 Session saved to Supabase');
+              } catch (e) {
+                logger.error('❌ Failed to save session to Supabase:', e);
+              }
+            },
+          };
+        }
+      }
+    } catch (e) {
+      logger.warn('⚠️ Failed to load session from Supabase, falling back to file-based auth');
+    }
+
+    // Fall back to file-based auth if Supabase fails or no session found
+    if (!sessionManager) {
+      logger.info('📁 Using file-based auth state...');
+      const fileAuth = await useMultiFileAuthState('auth_info_baileys');
+      sessionManager = {
+        state: fileAuth.state,
+        saveCreds: async () => {
+          await fileAuth.saveCreds();
+          // Also try to save to Supabase if available
+          if (supabase) {
+            try {
+              await supabase
+                .from('whatsapp_sessions')
+                .upsert({
+                  id: 'default',
+                  session_data: fileAuth.state,
+                  updated_at: new Date().toISOString(),
+                });
+            } catch (e) {
+              logger.warn('⚠️ Could not sync session to Supabase:', e.message);
+            }
+          }
+        },
+      };
+    }
+
+    const { state, saveCreds } = sessionManager;
 
     // Generate a unique browser ID for this session
     const browserId = `JARVIS-${Math.random().toString(36).substring(2, 8)}`
 
-    // Get the latest credentials
-    const authState = {
-      creds: state.creds,
-      keys: state.keys,
+    // Ensure we have a valid auth state
+    if (!state.creds || !state.keys) {
+      logger.warn('⚠️ Invalid auth state, clearing and retrying...');
+      if (supabase) {
+        await supabase
+          .from('whatsapp_sessions')
+          .delete()
+          .eq('id', 'default');
+      }
+      // Force reauthentication
+      return startWhatsAppBot();
     }
 
     console.log('🔑 Authentication state:', {
-      clientId: authState.creds?.me?.id?.substring(0, 8) + '...',
-      isRegistered: authState.creds.registered,
+      clientId: state.creds?.me?.id?.substring(0, 8) + '...',
+      isRegistered: state.creds.registered,
     })
 
     // Create the socket connection
