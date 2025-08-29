@@ -1,26 +1,24 @@
 {
   "name": "jarvis-whatsapp-bot",
   "version": "1.0.0",
-  "description": "JARVIS WhatsApp Bot using Baileys",
+  "description": "WhatsApp bot integration for JARVIS AI assistant",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "clear-auth": "node clear-auth.js"
   },
-  "keywords": ["whatsapp", "bot", "jarvis", "ai", "baileys"],
-  "author": "Badmus Qudus Ayomide",
-  "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.6.0",
-    "@hapi/boom": "^10.0.1",
-    "qrcode-terminal": "^0.12.0",
+    "@supabase/supabase-js": "^2.56.0",
+    "@whiskeysockets/baileys": "^6.7.18",
     "dotenv": "^16.3.1",
-    "pino": "^8.17.2",
-    "node-cache": "^5.1.2"
+    "node-cache": "^5.1.2",
+    "pino": "^8.14.1",
+    "pino-pretty": "^10.0.0",
+    "qrcode-terminal": "^0.12.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=16.0.0"
   }
 }

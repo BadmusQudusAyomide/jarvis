@@ -1,0 +1,32 @@
+[1mdiff --git a/whatsapp-bot/DEPLOY-CHECKLIST.md b/whatsapp-bot/DEPLOY-CHECKLIST.md[m
+[1mindex 5abb150..2c18851 100644[m
+[1m--- a/whatsapp-bot/DEPLOY-CHECKLIST.md[m
+[1m+++ b/whatsapp-bot/DEPLOY-CHECKLIST.md[m
+[36m@@ -55,3 +55,11 @@[m [mVITE_SUPABASE_ANON_KEY=your_complete_supabase_key[m
+ ---[m
+ [m
+ **Ready to deploy?** 🚀[m
+[41m+[m
+[41m+[m
+[41m+[m
+[41m+[m
+[41m+[m
+[41m+[m
+[41m+[m
+[41m+[m
+[1mdiff --git a/whatsapp-bot/jarvis-whatsapp-bot@1.0.0 b/whatsapp-bot/jarvis-whatsapp-bot@1.0.0[m
+[1mdeleted file mode 100644[m
+[1mindex e69de29..0000000[m
+[1mdiff --git a/whatsapp-bot/node b/whatsapp-bot/node[m
+[1mdeleted file mode 100644[m
+[1mindex e69de29..0000000[m
+[1mdiff --git a/whatsapp-bot/npm b/whatsapp-bot/npm[m
+[1mdeleted file mode 100644[m
+[1mindex b765523..0000000[m
+[1m--- a/whatsapp-bot/npm[m
+[1m+++ /dev/null[m
+[36m@@ -1,4 +0,0 @@[m
+[31m-Unknown command: "runC:\Users\DELL\Desktop\jarvis\whatsapp-bot"[m
+[31m-[m
+[31m-To see a list of supported npm commands, run:[m
+[31m-  npm help[m

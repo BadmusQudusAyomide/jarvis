@@ -5,7 +5,6 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
@@ -14,4 +13,8 @@ services:
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_GOOGLE_API_KEY
+        sync: false
+      - key: VITE_GOOGLE_CSE_ID
         sync: false

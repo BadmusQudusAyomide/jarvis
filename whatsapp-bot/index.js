@@ -11,7 +11,6 @@ import qrcode from 'qrcode-terminal'
 import dotenv from 'dotenv'
 import pino from 'pino'
 import { ResponseGenerator } from './services/responseGenerator.js'
-import http from 'http'
 
 dotenv.config()
 
@@ -23,7 +22,7 @@ const userSessions = new Map()
 
 // Global variable to track reconnection attempts
 let reconnectAttempts = 0
-const MAX_RECONNECT_ATTEMPTS = 5
+const MAX_RECONNECT_ATTEMPTS = 10 // Increased for production
 
 // Create a simple logger that's compatible with Baileys
 const logger = {
@@ -48,30 +47,26 @@ const logger = {
 // Basic in-memory store placeholder (not used but kept for compatibility)
 const store = {}
 
-// Create HTTP server for health checks
-const server = http.createServer((req, res) => {
+// Health check endpoint for Render
+import { createServer } from 'http'
+
+const server = createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(
-      JSON.stringify({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        whatsapp: 'connected',
-      })
-    )
+    res.end(JSON.stringify({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      botStatus: reconnectAttempts < MAX_RECONNECT_ATTEMPTS ? 'running' : 'error'
+    }))
   } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' })
-    res.end('Not Found')
+    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    res.end('JARVIS WhatsApp Bot is running!')
   }
 })
 
-// Start HTTP server
 const PORT = process.env.PORT || 3000
 server.listen(PORT, () => {
-  console.log(`🚀 HTTP Server running on port ${PORT}`)
-  console.log(`📊 Health check available at http://localhost:${PORT}/health`)
+  console.log(`🚀 Health check server running on port ${PORT}`)
 })
 
 async function startWhatsAppBot() {
@@ -153,6 +148,7 @@ async function startWhatsAppBot() {
       if (connection === 'open') {
         logger.info('✅ Successfully connected to WhatsApp')
         console.log('\n✅ JARVIS WhatsApp Bot is now connected and ready!\n')
+        reconnectAttempts = 0 // Reset counter on successful connection
       }
 
       if (connection === 'close') {
@@ -169,7 +165,7 @@ async function startWhatsAppBot() {
 
         if (shouldReconnect && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           reconnectAttempts++
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000) // Exponential backoff, max 30s
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 60000) // Exponential backoff, max 60s
           console.log(
             `🔄 Attempting to reconnect in ${delay / 1000} seconds (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`
           )
@@ -295,15 +291,15 @@ async function startWhatsAppBot() {
 process.on('SIGINT', () => {
   console.log('🛑 Shutting down JARVIS WhatsApp Bot...')
   server.close(() => {
-    console.log('✅ HTTP server closed')
+    console.log('✅ Health check server closed')
     process.exit(0)
   })
 })
 
 process.on('SIGTERM', () => {
-  console.log('🛑 Shutting down JARVIS WhatsApp Bot...')
+  console.log('🛑 Received SIGTERM, shutting down gracefully...')
   server.close(() => {
-    console.log('✅ HTTP server closed')
+    console.log('✅ Health check server closed')
     process.exit(0)
   })
 })

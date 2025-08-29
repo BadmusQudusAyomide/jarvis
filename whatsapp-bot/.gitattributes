@@ -1,0 +1,8 @@
+# Auto-detect text files and normalize to LF
+* text=auto
+
+# Force specific files to always use LF
+*.js text eol=lf
+*.json text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
