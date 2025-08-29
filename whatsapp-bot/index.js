@@ -52,7 +52,7 @@ const crushProfiles = {
     doesHeLikeMe:
       "Like you? 😏 He's absolutely crazy about you! I've never seen anyone so completely smitten. He talks about you constantly, and his face lights up every time he mentions your name. It's actually adorable! 💖",
   },
-  Islamiyat: {
+  Islamiyat: {done
     response:
       "Wow! 😍 *He* talks about you all the time! You're even more amazing than he described.",
     followUp: "He's completely smitten by you... 💫",
@@ -60,6 +60,26 @@ const crushProfiles = {
       "He told me you're the most intelligent person he's ever met! 🧠 Your creativity and passion for life inspire him every day. You're absolutely perfect! 🌟",
     moreDetails:
       "He says you have this incredible energy that lights up his world, and your kindness touches everyone around you. You're his dream girl! 💖",
+    // Extra special responses for Islamiyat
+    extraResponse1:
+      "He told me you're the kind of person who makes him believe in destiny. That some people are just meant to find each other! ✨",
+    extraResponse2:
+      'He says your intelligence is absolutely captivating. You challenge him to be better every single day! 🧠💫',
+    extraResponse3:
+      "He mentioned you have this incredible aura that draws people to you. You're magnetic in the best possible way! 🌟",
+    extraResponse4:
+      "He told me you're the reason he believes in love at first sight. You're everything he never knew he was looking for! 💕",
+    extraResponse5:
+      "He says you're not just beautiful, you're extraordinary. You're the kind of person who changes lives just by being you! 🌸",
+    // Special questions she might ask
+    whoIsHe:
+      "Well... he's someone who's completely enchanted by you. Someone who talks about you with such passion and admiration. Someone who's absolutely, completely, totally in love with you! 💫",
+    whatDidHeSay:
+      "Oh my! He says you're the most brilliant and beautiful person he's ever encountered. Your mind, your heart, your soul - everything about you leaves him speechless! 🌟",
+    isHeCute:
+      "Haha! 😄 I think he's quite handsome, but what's most important is that he's absolutely devoted to you. He's the kind of guy who would do anything to make you happy! 💪💕",
+    doesHeLikeMe:
+      "Like you? 😏 He's absolutely obsessed with you! I've never seen anyone so completely captivated. He talks about you non-stop, and his eyes sparkle every time he mentions your name! 💖",
   },
   Islamiya: {
     response:
@@ -69,6 +89,26 @@ const crushProfiles = {
       "He told me you're the most beautiful soul he's ever encountered! 🌸 Your strength and determination amaze him, and your smile brightens his darkest days. You're absolutely perfect! ✨",
     moreDetails:
       "He says you have this magical way of making everything better, and your intelligence and wit keep him on his toes. You're his everything! 💫",
+    // Extra special responses for Islamiya
+    extraResponse1:
+      "He told me you're the kind of person who makes him believe in miracles. That love like this only happens once in a lifetime! ✨",
+    extraResponse2:
+      "He says your strength and determination inspire him every day. You're his role model and his muse! 💪💫",
+    extraResponse3:
+      "He mentioned you have this incredible way of making him feel safe and loved. You're his sanctuary! 🏠💕",
+    extraResponse4:
+      "He told me you're the light in his darkness, the hope in his despair. You're his salvation! 🌟",
+    extraResponse5:
+      "He says you're not just his love, you're his destiny. You're the person he was meant to spend his life with! 💫",
+    // Special questions she might ask
+    whoIsHe:
+      "Well... he's someone who's completely and utterly devoted to you. Someone who sees you as his soulmate, his best friend, and his true love all in one. Someone who's absolutely, hopelessly in love with you! 💫",
+    whatDidHeSay:
+      "Oh, he says you're the most incredible person he's ever known! Your strength, your beauty, your intelligence - everything about you amazes him. He's completely mesmerized by you! 🌟",
+    isHeCute:
+      "Haha! 😄 I think he's quite attractive, but what matters most is that he's completely devoted to you. He's the kind of guy who would give up everything just to see you smile! 💪💕",
+    doesHeLikeMe:
+      "Like you? 😏 He's absolutely head over heels for you! I've never seen anyone so completely in love. He talks about you constantly, and his whole world revolves around you! 💖",
   },
 }
 
@@ -353,6 +393,72 @@ async function startWhatsAppBot() {
               }, 24000)
             }
 
+            // Extra special treatment for Islamiyat - send additional romantic messages
+            if (matchedCrush === 'Islamiyat') {
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse1,
+                })
+              }, 8000)
+
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse2,
+                })
+              }, 12000)
+
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse3,
+                })
+              }, 16000)
+
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse4,
+                })
+              }, 20000)
+
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse5,
+                })
+              }, 24000)
+            }
+
+            // Extra special treatment for Islamiya - send additional romantic messages
+            if (matchedCrush === 'Islamiya') {
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse1,
+                })
+              }, 8000)
+
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse2,
+                })
+              }, 12000)
+
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse3,
+                })
+              }, 16000)
+
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse4,
+                })
+              }, 20000)
+
+              setTimeout(async () => {
+                await sock.sendMessage(remoteJid, {
+                  text: profile.extraResponse5,
+                })
+              }, 24000)
+            }
+
             // Don't return here - let it continue to normal AI processing
           } else {
             // Fun response for other names
@@ -434,6 +540,36 @@ async function startWhatsAppBot() {
                 }, 12000)
               }
 
+              // Extra special responses for Islamiyat
+              if (matchedCrush === 'Islamiyat') {
+                setTimeout(async () => {
+                  const extraSweet =
+                    "He told me you're the kind of person who makes him believe in soulmates. That some connections are just meant to be! ✨"
+                  await sock.sendMessage(remoteJid, { text: extraSweet })
+                }, 8000)
+
+                setTimeout(async () => {
+                  const extraRomantic =
+                    "He says you're not just his crush, you're his intellectual equal, his creative partner, and his true love. You're his perfect match! 💫"
+                  await sock.sendMessage(remoteJid, { text: extraRomantic })
+                }, 12000)
+              }
+
+              // Extra special responses for Islamiya
+              if (matchedCrush === 'Islamiya') {
+                setTimeout(async () => {
+                  const extraSweet =
+                    "He told me you're the kind of person who makes him believe in miracles. That love like yours only happens once in a lifetime! 🌟"
+                  await sock.sendMessage(remoteJid, { text: extraSweet })
+                }, 8000)
+
+                setTimeout(async () => {
+                  const extraRomantic =
+                    "He says you're not just his crush, you're his strength, his hope, and his destiny. You're the person he was meant to find! 💫"
+                  await sock.sendMessage(remoteJid, { text: extraRomantic })
+                }, 12000)
+              }
+
               // Don't return here - let it continue to normal AI processing
             }
           }
@@ -478,6 +614,90 @@ async function startWhatsAppBot() {
 
             if (
               lowerText.includes('does he like me') ||
+              lowerText.includes('does he like me') ||
+              lowerText.includes('does he have feelings')
+            ) {
+              const profile = crushProfiles[matchedCrush]
+              await sock.sendMessage(remoteJid, { text: profile.doesHeLikeMe })
+              return // Return here since this is a specific crush question
+            }
+          }
+
+          // Special question handling for Islamiyat
+          if (matchedCrush === 'Islamiyat') {
+            const lowerText = messageText.toLowerCase()
+
+            // Handle specific questions she might ask
+            if (
+              lowerText.includes('who is he') ||
+              lowerText.includes("who's he")
+            ) {
+              const profile = crushProfiles[matchedCrush]
+              await sock.sendMessage(remoteJid, { text: profile.whoIsHe })
+              return // Return here since this is a specific crush question
+            }
+
+            if (
+              lowerText.includes('what did he say') ||
+              lowerText.includes('what did he tell you')
+            ) {
+              const profile = crushProfiles[matchedCrush]
+              await sock.sendMessage(remoteJid, { text: profile.whatDidHeSay })
+              return // Return here since this is a specific crush question
+            }
+
+            if (
+              lowerText.includes('is he cute') ||
+              lowerText.includes('is he handsome')
+            ) {
+              const profile = crushProfiles[matchedCrush]
+              await sock.sendMessage(remoteJid, { text: profile.isHeCute })
+              return // Return here since this is a specific crush question
+            }
+
+            if (
+              lowerText.includes('does he like me') ||
+              lowerText.includes('does he have feelings')
+            ) {
+              const profile = crushProfiles[matchedCrush]
+              await sock.sendMessage(remoteJid, { text: profile.doesHeLikeMe })
+              return // Return here since this is a specific crush question
+            }
+          }
+
+          // Special question handling for Islamiya
+          if (matchedCrush === 'Islamiya') {
+            const lowerText = messageText.toLowerCase()
+
+            // Handle specific questions she might ask
+            if (
+              lowerText.includes('who is he') ||
+              lowerText.includes("who's he")
+            ) {
+              const profile = crushProfiles[matchedCrush]
+              await sock.sendMessage(remoteJid, { text: profile.whoIsHe })
+              return // Return here since this is a specific crush question
+            }
+
+            if (
+              lowerText.includes('what did he say') ||
+              lowerText.includes('what did he tell you')
+            ) {
+              const profile = crushProfiles[matchedCrush]
+              await sock.sendMessage(remoteJid, { text: profile.whatDidHeSay })
+              return // Return here since this is a specific crush question
+            }
+
+            if (
+              lowerText.includes('is he cute') ||
+              lowerText.includes('is he handsome')
+            ) {
+              const profile = crushProfiles[matchedCrush]
+              await sock.sendMessage(remoteJid, { text: profile.isHeCute })
+              return // Return here since this is a specific crush question
+            }
+
+            if (
               lowerText.includes('does he like me') ||
               lowerText.includes('does he have feelings')
             ) {

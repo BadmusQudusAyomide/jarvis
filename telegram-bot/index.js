@@ -85,8 +85,28 @@ const crushProfiles = {
       "He told me you're the most intelligent person he's ever met! 🧠 Your creativity and passion for life inspire him every day. You're absolutely perfect! 🌟",
     moreDetails:
       "He says you have this incredible energy that lights up his world, and your kindness touches everyone around you. You're his dream girl! 💖",
+    // Extra special responses for Islamiyat
+    extraResponse1:
+      "He told me you're the kind of person who makes him believe in destiny. That some people are just meant to find each other! ✨",
+    extraResponse2:
+      'He says your intelligence is absolutely captivating. You challenge him to be better every single day! 🧠💫',
+    extraResponse3:
+      "He mentioned you have this incredible aura that draws people to you. You're magnetic in the best possible way! 🌟",
+    extraResponse4:
+      "He told me you're the reason he believes in love at first sight. You're everything he never knew he was looking for! 💕",
+    extraResponse5:
+      "He says you're not just beautiful, you're extraordinary. You're the kind of person who changes lives just by being you! 🌸",
+    // Special questions she might ask
+    whoIsHe:
+      "Well... he's someone who's completely enchanted by you. Someone who talks about you with such passion and admiration. Someone who's absolutely, completely, totally in love with you! 💫",
+    whatDidHeSay:
+      "Oh my! He says you're the most brilliant and beautiful person he's ever encountered. Your mind, your heart, your soul - everything about you leaves him speechless! 🌟",
+    isHeCute:
+      "Haha! 😄 I think he's quite handsome, but what's most important is that he's absolutely devoted to you. He's the kind of guy who would do anything to make you happy! 💪💕",
+    doesHeLikeMe:
+      "Like you? 😏 He's absolutely obsessed with you! I've never seen anyone so completely captivated. He talks about you non-stop, and his eyes sparkle every time he mentions your name! 💖",
   },
-  Emma: {
+  Islamiya: {
     response:
       "Oh my! 😊 *He* has been raving about you! You're everything he said and more.",
     followUp: "He's head over heels for you... 💕",
@@ -94,6 +114,26 @@ const crushProfiles = {
       "He told me you're the most beautiful soul he's ever encountered! 🌸 Your strength and determination amaze him, and your smile brightens his darkest days. You're absolutely perfect! ✨",
     moreDetails:
       "He says you have this magical way of making everything better, and your intelligence and wit keep him on his toes. You're his everything! 💫",
+    // Extra special responses for Islamiya
+    extraResponse1:
+      "He told me you're the kind of person who makes him believe in miracles. That love like this only happens once in a lifetime! ✨",
+    extraResponse2:
+      "He says your strength and determination inspire him every day. You're his role model and his muse! 💪💫",
+    extraResponse3:
+      "He mentioned you have this incredible way of making him feel safe and loved. You're his sanctuary! 🏠💕",
+    extraResponse4:
+      "He told me you're the light in his darkness, the hope in his despair. You're his salvation! 🌟",
+    extraResponse5:
+      "He says you're not just his love, you're his destiny. You're the person he was meant to spend his life with! 💫",
+    // Special questions she might ask
+    whoIsHe:
+      "Well... he's someone who's completely and utterly devoted to you. Someone who sees you as his soulmate, his best friend, and his true love all in one. Someone who's absolutely, hopelessly in love with you! 💫",
+    whatDidHeSay:
+      "Oh, he says you're the most incredible person he's ever known! Your strength, your beauty, your intelligence - everything about you amazes him. He's completely mesmerized by you! 🌟",
+    isHeCute:
+      "Haha! 😄 I think he's quite attractive, but what matters most is that he's completely devoted to you. He's the kind of guy who would give up everything just to see you smile! 💪💕",
+    doesHeLikeMe:
+      "Like you? 😏 He's absolutely head over heels for you! I've never seen anyone so completely in love. He talks about you constantly, and his whole world revolves around you! 💖",
   },
 }
 
