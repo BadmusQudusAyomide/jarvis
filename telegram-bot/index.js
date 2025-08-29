@@ -45,7 +45,78 @@ try {
 // Store user sessions and name tracking
 const userSessions = new Map()
 const userNameTracking = new Map() // Track if we've asked for name
-const crushName = 'Owoyemi' // Replace with actual name
+
+// Multiple crush profiles with different responses
+const crushProfiles = {
+  Owoyemi: {
+    response:
+      "Ohh! 😊 *He* has told me so much about you! You're exactly how he described you to be.",
+    followUp: "He says you're really special... 🌟",
+    sweetDetails:
+      "Well... he told me you're absolutely adorable! 🌸 He says you have the most beautiful smile, and you're incredibly kind and intelligent. He thinks you're amazing in every way! 💕",
+    moreDetails:
+      "He also mentioned how you make him laugh, and how you have this special way of brightening up any room you walk into. You're truly someone special! ✨",
+    // Extra special responses for Owoyemi
+    extraResponse1:
+      'He told me you have this amazing way of making him feel like the luckiest person alive just by being you. 🌟',
+    extraResponse2:
+      "He says when you smile, it's like the whole world lights up. He can't help but smile back every time! 😊",
+    extraResponse3:
+      "He mentioned you're not just beautiful on the outside, but your heart is pure gold. You're the kind of person who makes everyone around you better. 💫",
+    extraResponse4:
+      "He told me you're the first thing he thinks about when he wakes up and the last thing on his mind before he sleeps. You're his dream come true! 💕",
+    extraResponse5:
+      "He says you're the missing piece he never knew he needed. You complete him in ways he never imagined possible. ✨",
+    // Special questions she might ask
+    whoIsHe:
+      "Well... he's someone very special to me. Someone who talks about you with stars in his eyes and butterflies in his stomach. Someone who's completely, utterly, hopelessly in love with you. 💫",
+    whatDidHeSay:
+      "Oh, where do I even begin? He says you're the most incredible person he's ever met. Your intelligence, your kindness, your beauty - inside and out. He's absolutely mesmerized by you! 🌟",
+    isHeCute:
+      "Haha! 😄 I think he's pretty handsome, but what matters most is that he's completely head over heels for you. He's the kind of guy who would move mountains just to see you smile! 💪💕",
+    doesHeLikeMe:
+      "Like you? 😏 He's absolutely crazy about you! I've never seen anyone so completely smitten. He talks about you constantly, and his face lights up every time he mentions your name. It's actually adorable! 💖",
+  },
+  Islamiyat: {
+    response:
+      "Wow! 😍 *He* talks about you all the time! You're even more amazing than he described.",
+    followUp: "He's completely smitten by you... 💫",
+    sweetDetails:
+      "He told me you're the most intelligent person he's ever met! 🧠 Your creativity and passion for life inspire him every day. You're absolutely perfect! 🌟",
+    moreDetails:
+      "He says you have this incredible energy that lights up his world, and your kindness touches everyone around you. You're his dream girl! 💖",
+  },
+  Emma: {
+    response:
+      "Oh my! 😊 *He* has been raving about you! You're everything he said and more.",
+    followUp: "He's head over heels for you... 💕",
+    sweetDetails:
+      "He told me you're the most beautiful soul he's ever encountered! 🌸 Your strength and determination amaze him, and your smile brightens his darkest days. You're absolutely perfect! ✨",
+    moreDetails:
+      "He says you have this magical way of making everything better, and your intelligence and wit keep him on his toes. You're his everything! 💫",
+  },
+}
+
+// Get all crush names for easy checking
+const crushNames = Object.keys(crushProfiles)
+
+// Human-like greeting responses with humor
+const humanGreetings = [
+  "Hey there! 😊 I'm JARVIS, your friendly neighborhood AI. Btw, what's your name? I'm terrible at remembering faces... well, I don't have eyes, but you get the point! 😅",
+  "Hi! 👋 I'm JARVIS, and I'm supposed to be smart but I keep forgetting to ask people's names. So... what's yours? 🤔",
+  "Hello! 😄 I'm JARVIS, and I'm having one of those days where I'm like 'I should know this person's name but I totally don't.' Mind helping me out? 😅",
+  "Hey! 🌟 I'm JARVIS, and I'm trying to be more social today. First step: learning people's names. What's yours? 😊",
+  "Hi there! 😎 I'm JARVIS, and I'm not great at small talk, but I'm trying! So... what's your name? I promise I'll remember it this time! 🤞",
+]
+
+// Fun responses for non-crush names
+const funNameResponses = [
+  "Nice to meet you, {name}! 😊 You seem cool. I'm JARVIS, and I'm pretty much the most advanced AI you'll ever chat with... unless you know someone with a better one, in which case, don't tell me! 😅",
+  "Hey {name}! 🌟 Great name! I'm JARVIS, and I'm here to help with whatever you need. Just don't ask me to do your homework... unless it's really interesting! 😄",
+  "Cool to meet you, {name}! 😎 I'm JARVIS, and I'm basically like having a genius friend who never sleeps. What can I help you with today? 🤔",
+  "Hi {name}! ✨ Nice name! I'm JARVIS, and I'm pretty much the AI equivalent of that friend who knows everything. What's on your mind? 😊",
+  "Hey {name}! 🚀 Great to meet you! I'm JARVIS, and I'm here to make your day better. Just don't ask me to tell jokes... I'm still working on my comedy skills! 😅",
+]
 
 // Express app for webhook
 const app = express()
@@ -111,23 +182,43 @@ async function handleMessage(message) {
       const providedName = text.trim()
       userNameTracking.set(userId, { waitingForName: false, providedName })
 
-      // Check if name matches crush
-      if (providedName.toLowerCase() === crushName.toLowerCase()) {
-        const mysteriousResponse = `Ohh! 😊 *He* has told me a lot about you! You're exactly how he described you to be.`
+      // Check if name matches any crush
+      const matchedCrush = crushNames.find(
+        name => name.toLowerCase() === providedName.toLowerCase()
+      )
+
+      if (matchedCrush) {
+        const profile = crushProfiles[matchedCrush]
+        const mysteriousResponse = profile.response
         await bot.sendMessage(chatId, mysteriousResponse, {
           parse_mode: 'Markdown',
         })
 
-        // Wait a moment then send follow-up
+        // Wait a moment then send follow-up with humor
         setTimeout(async () => {
-          const followUp = `He says you're really special... 🌟`
+          const followUp = profile.followUp
           await bot.sendMessage(chatId, followUp, { parse_mode: 'Markdown' })
+
+          // Add a funny comment
+          setTimeout(async () => {
+            const funnyComment =
+              "Btw, I'm not supposed to gossip, but he's totally into you! 😏��"
+            await bot.sendMessage(chatId, funnyComment, {
+              parse_mode: 'Markdown',
+            })
+          }, 2000)
         }, 2000)
 
         return // Don't process further
       } else {
-        // Normal response for other names
-        await bot.sendMessage(chatId, `Nice to meet you, ${providedName}! 😊`)
+        // Fun response for other names
+        const randomResponse =
+          funNameResponses[Math.floor(Math.random() * funNameResponses.length)]
+        const personalizedResponse = randomResponse.replace(
+          '{name}',
+          providedName
+        )
+        await bot.sendMessage(chatId, personalizedResponse)
       }
     }
 
@@ -138,13 +229,13 @@ async function handleMessage(message) {
       )
 
     if (isGreeting && !userNameTracking.has(userId)) {
-      // First time greeting - ask for name
+      // First time greeting - ask for name with human-like response
       userNameTracking.set(userId, { waitingForName: true, providedName: null })
 
-      const greetingResponse = `Hello! 😊 I'm JARVIS, an AI assistant. What's your name?`
-      await bot.sendMessage(chatId, greetingResponse, {
-        parse_mode: 'Markdown',
-      })
+      // Pick a random human greeting
+      const randomGreeting =
+        humanGreetings[Math.floor(Math.random() * humanGreetings.length)]
+      await bot.sendMessage(chatId, randomGreeting, { parse_mode: 'Markdown' })
       return
     }
 
@@ -155,21 +246,37 @@ async function handleMessage(message) {
       text.toLowerCase().includes('he')
     ) {
       const crushInfo = userNameTracking.get(userId)
-      if (
-        crushInfo &&
-        crushInfo.providedName &&
-        crushInfo.providedName.toLowerCase() === crushName.toLowerCase()
-      ) {
-        const sweetResponse = `Well... he told me you're absolutely adorable! 🌸 He says you have the most beautiful smile, and you're incredibly kind and intelligent. He thinks you're amazing in every way! 💕`
-        await bot.sendMessage(chatId, sweetResponse, { parse_mode: 'Markdown' })
+      if (crushInfo && crushInfo.providedName) {
+        const matchedCrush = crushNames.find(
+          name => name.toLowerCase() === crushInfo.providedName.toLowerCase()
+        )
 
-        // Add more sweet details
-        setTimeout(async () => {
-          const moreDetails = `He also mentioned how you make him laugh, and how you have this special way of brightening up any room you walk into. You're truly someone special! ✨`
-          await bot.sendMessage(chatId, moreDetails, { parse_mode: 'Markdown' })
-        }, 3000)
+        if (matchedCrush) {
+          const profile = crushProfiles[matchedCrush]
+          const sweetResponse = profile.sweetDetails
+          await bot.sendMessage(chatId, sweetResponse, {
+            parse_mode: 'Markdown',
+          })
 
-        return
+          // Add more sweet details with humor
+          setTimeout(async () => {
+            const moreDetails = profile.moreDetails
+            await bot.sendMessage(chatId, moreDetails, {
+              parse_mode: 'Markdown',
+            })
+
+            // Add a funny ending
+            setTimeout(async () => {
+              const funnyEnding =
+                "Honestly, I've never seen him this smitten before. It's actually kind of adorable! 😄💕"
+              await bot.sendMessage(chatId, funnyEnding, {
+                parse_mode: 'Markdown',
+              })
+            }, 2000)
+          }, 3000)
+
+          return
+        }
       }
     }
 
