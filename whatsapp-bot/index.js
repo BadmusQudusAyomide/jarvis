@@ -52,7 +52,7 @@ const crushProfiles = {
     doesHeLikeMe:
       "Like you? 😏 He's absolutely crazy about you! I've never seen anyone so completely smitten. He talks about you constantly, and his face lights up every time he mentions your name. It's actually adorable! 💖",
   },
-  Islamiyat: {donne
+  Islamiyat: {
     response:
       "Wow! 😍 *He* talks about you all the time! You're even more amazing than he described.",
     followUp: "He's completely smitten by you... 💫",
