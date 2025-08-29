@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: cd whatsapp-bot && npm install
-    startCommand: cd whatsapp-bot && npm start
+    startCommand: cd whatsapp-bot && node server.js
     envVars:
       - key: NODE_ENV
         value: production
